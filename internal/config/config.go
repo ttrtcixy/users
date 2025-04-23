@@ -4,7 +4,6 @@ import (
 	"errors"
 	"github.com/goloop/env"
 	"github.com/ttrtcixy/users/internal/logger"
-	"log"
 	"os"
 )
 
@@ -21,7 +20,7 @@ func (c *Config) Close() error {
 
 // NewConfig load parameters from the env file and return Config
 func NewConfig(log logger.Logger) *Config {
-	MustLoad(".env")
+	MustLoad(log, ".env")
 
 	return &Config{
 		DBConfig:         NewDbConfig(log),
@@ -30,20 +29,20 @@ func NewConfig(log logger.Logger) *Config {
 }
 
 // MustLoad loading parameters from the env file
-func MustLoad(filename string) {
+func MustLoad(log logger.Logger, filename string) {
 	_, err := os.Stat(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.Fatalf("file %s does not exist", filename)
+			log.Fatal("file %s does not exist", filename)
 		} else {
-			log.Fatal(err)
+			log.Fatal(err.Error())
 		}
 	}
 
 	err = env.Load(filename)
 	if err != nil {
-		log.Fatalf("Incorrect data in the configuration file: %s", err)
+		log.Fatal("Incorrect data in the configuration file: %s", err.Error())
 	}
 
-	log.Printf("the configuration file '%s' has been uploaded successfully", filename)
+	log.Info("the configuration file '%s' has been uploaded successfully", filename)
 }

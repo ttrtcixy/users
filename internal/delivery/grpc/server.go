@@ -35,12 +35,12 @@ func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase *usec
 	}
 }
 
-func (s *Server) Start(ctx context.Context, cfg config.GRPCServerConfig) (err error) {
+func (s *Server) Start(ctx context.Context) (err error) {
 	s.log.Info("[*] starting gRPC server")
 
 	s.srv = grpc.NewServer()
 	s.register(s.srv)
-	s.l, err = net.Listen(cfg.Network(), cfg.Addr())
+	s.l, err = net.Listen(s.cfg.Network(), s.cfg.Addr())
 	if err != nil {
 		return err
 	}
