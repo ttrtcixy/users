@@ -24,5 +24,8 @@ func NewSignin(log logger.Logger, usecase *usecase.UseCase) AuthSignin {
 }
 
 func (s *signin) Signin(ctx context.Context, payload *dtos.SigninRequest) (*dtos.SigninResponse, error) {
-	return nil, nil
+	return &dtos.SigninResponse{
+		AccessToken:  "Qwe",
+		RefreshToken: "Qqdaweqd",
+	}, nil
 }

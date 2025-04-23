@@ -6,6 +6,7 @@ import (
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/delivery/grpc/auth"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"net"
 
 	"github.com/ttrtcixy/users/internal/logger"
@@ -36,7 +37,7 @@ func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase *usec
 }
 
 func (s *Server) Start(ctx context.Context) (err error) {
-	s.log.Info("[*] starting gRPC server")
+	s.log.Info("[*] starting gRPC server on %s", s.cfg.Addr())
 
 	s.srv = grpc.NewServer()
 	s.register(s.srv)
@@ -44,6 +45,7 @@ func (s *Server) Start(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	reflection.Register(s.srv)
 	return s.srv.Serve(s.l)
 }
 
