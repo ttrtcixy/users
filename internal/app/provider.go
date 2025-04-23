@@ -2,11 +2,14 @@ package app
 
 import (
 	"context"
+	"github.com/ttrtcixy/users/internal/app/closer"
 	"github.com/ttrtcixy/users/internal/config"
+	"github.com/ttrtcixy/users/internal/delivery/grpc"
 	"github.com/ttrtcixy/users/internal/logger"
 	"github.com/ttrtcixy/users/internal/repository"
 	"github.com/ttrtcixy/users/internal/storage"
 	"github.com/ttrtcixy/users/internal/usecase"
+	"time"
 )
 
 type Provider struct {
@@ -19,7 +22,9 @@ type Provider struct {
 
 	repository repository.Repository
 
-	//grpcAuthServer usersProtos.UsersAuthServer
+	grpcServer *grpc.Server
+
+	closer closer.Closer
 }
 
 func NewProvider() *Provider {
@@ -44,7 +49,12 @@ func (p *Provider) Logger() logger.Logger {
 
 func (p *Provider) Config() *config.Config {
 	if p.cfg == nil {
-		p.cfg = config.NewConfig()
+		p.cfg = config.NewConfig(p.Logger())
+
+		p.Closer().Add(
+			"env clear",
+			p.cfg.Close,
+		)
 	}
 
 	return p.cfg
@@ -60,13 +70,33 @@ func (p *Provider) Repository() repository.Repository {
 func (p *Provider) DB() storage.DB {
 	if p.db == nil {
 		p.db = storage.NewDB(context.Background(), p.Logger(), p.Config().DBConfig)
+
+		p.Closer().Add(
+			"db connect close",
+			p.db.Close,
+		)
 	}
 	return p.db
 }
 
-//func (p *Provider) GRPCAuthServer() usersProtos.UsersAuthServer {
-//	if p.grpcAuthServer == nil {
-//		p.grpcAuthServer = grpc.NewGRPCAuthServer(p.Logger(), p.Config().GRPCServerConfig, p.UseCase())
-//	}
-//	return p.grpcAuthServer
-//}
+func (p *Provider) GRPCServer() *grpc.Server {
+	if p.grpcServer == nil {
+		p.grpcServer = grpc.NewGRPCServer(p.Logger(), p.Config().GRPCServerConfig, p.UseCase())
+		p.Closer().Add(
+			"grpc server close",
+			p.grpcServer.Close,
+		)
+	}
+	return p.grpcServer
+}
+
+func (p *Provider) Closer() closer.Closer {
+	if p.closer == nil {
+		p.closer = closer.New(closer.Config{
+			TotalDuration: 5 * time.Second,
+			FuncDuration:  3 * time.Second,
+			Logger:        p.Logger(),
+		})
+	}
+	return p.closer
+}

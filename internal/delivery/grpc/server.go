@@ -12,29 +12,32 @@ import (
 	"github.com/ttrtcixy/users/internal/usecase"
 )
 
-type GRPCServer struct {
+type Server struct {
 	log logger.Logger
 	cfg config.GRPCServerConfig
 
-	srv *grpc.Server
-	l   net.Listener
-
+	srv             *grpc.Server
+	l               net.Listener
 	userAuthService usersProtos.UsersAuthServer
+	userService     usersProtos.UsersServer
 }
 
-func (s *GRPCServer) register(gRPC *grpc.Server) {
+func (s *Server) register(gRPC *grpc.Server) {
 	usersProtos.RegisterUsersAuthServer(gRPC, s.userAuthService)
+	usersProtos.RegisterUsersServer(gRPC, s.userService)
 }
 
-func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase *usecase.UseCase) *GRPCServer {
-	return &GRPCServer{
+func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase *usecase.UseCase) *Server {
+	return &Server{
 		log:             log,
 		cfg:             cfg,
 		userAuthService: grpcauthservise.NewUserAuthService(context.Background(), log, usecase),
 	}
 }
 
-func (s *GRPCServer) Start(ctx context.Context, cfg config.GRPCServerConfig) (err error) {
+func (s *Server) Start(ctx context.Context, cfg config.GRPCServerConfig) (err error) {
+	s.log.Info("[*] starting gRPC server")
+
 	s.srv = grpc.NewServer()
 	s.register(s.srv)
 	s.l, err = net.Listen(cfg.Network(), cfg.Addr())
@@ -44,13 +47,8 @@ func (s *GRPCServer) Start(ctx context.Context, cfg config.GRPCServerConfig) (er
 	return s.srv.Serve(s.l)
 }
 
-func (s *GRPCServer) Close() error {
-	s.log.Info("stopping grpc server")
+func (s *Server) Close() error {
 	s.srv.Stop()
-	s.log.Info("close net listener")
-	err := s.l.Close()
-	if err != nil {
-		return err
-	}
+
 	return nil
 }

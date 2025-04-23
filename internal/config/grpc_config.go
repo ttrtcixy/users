@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/ttrtcixy/users/internal/logger"
 	"os"
 )
 
@@ -18,7 +19,27 @@ type gRPCServerConfig struct {
 	network string
 }
 
-func NewGRPCConfig() GRPCServerConfig {
+func NewGRPCConfig(log logger.Logger) GRPCServerConfig {
+	var cfg = &gRPCServerConfig{}
+
+	if value, ok := os.LookupEnv("GRPC_HOST"); ok {
+		cfg.host = value
+	} else {
+		log.Error("[!] GRPC_HOST is not set")
+	}
+
+	if value, ok := os.LookupEnv("GRPC_PORT"); ok {
+		cfg.port = value
+	} else {
+		log.Error("[!] GRPC_PORT is not set")
+	}
+
+	if value, ok := os.LookupEnv("GRPC_NETWORK"); ok {
+		cfg.network = value
+	} else {
+		log.Error("[!] GRPC_NETWORK is not set")
+	}
+
 	return &gRPCServerConfig{host: os.Getenv("GRPC_HOST"), port: os.Getenv("GRPC_PORT"), network: os.Getenv("GRPC_NETWORK")}
 }
 

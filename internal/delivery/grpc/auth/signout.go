@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type Signout interface {
+type AuthSignout interface {
 	Signout(context.Context, *dtos.SignoutRequest) (*emptypb.Empty, error)
 }
 
@@ -17,7 +17,7 @@ type signout struct {
 	usecase *usecase.UseCase
 }
 
-func NewSignout(log logger.Logger, usecase *usecase.UseCase) Signout {
+func NewSignout(log logger.Logger, usecase *usecase.UseCase) AuthSignout {
 	return &signout{
 		log:     log,
 		usecase: usecase,

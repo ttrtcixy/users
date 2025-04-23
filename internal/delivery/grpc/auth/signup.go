@@ -7,7 +7,7 @@ import (
 	"github.com/ttrtcixy/users/internal/usecase"
 )
 
-type Signup interface {
+type AuthSignup interface {
 	Signup(ctx context.Context, payload *dtos.SignupRequest) (*dtos.SignupResponse, error)
 }
 
@@ -16,7 +16,7 @@ type signup struct {
 	usecase *usecase.UseCase
 }
 
-func NewSignup(log logger.Logger, usecase *usecase.UseCase) Signup {
+func NewSignup(log logger.Logger, usecase *usecase.UseCase) AuthSignup {
 	return &signup{
 		log:     log,
 		usecase: usecase,

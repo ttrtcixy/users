@@ -3,25 +3,33 @@ package config
 import (
 	"errors"
 	"github.com/goloop/env"
+	"github.com/ttrtcixy/users/internal/logger"
 	"log"
 	"os"
 )
 
+// Config struct
 type Config struct {
 	DBConfig         DBConfig
 	GRPCServerConfig GRPCServerConfig
 }
 
-func NewConfig() *Config {
+func (c *Config) Close() error {
+	env.Clear()
+	return nil
+}
+
+// NewConfig load parameters from the env file and return Config
+func NewConfig(log logger.Logger) *Config {
 	MustLoad(".env")
 
 	return &Config{
-		DBConfig:         NewDbConfig(),
-		GRPCServerConfig: NewGRPCConfig(),
+		DBConfig:         NewDbConfig(log),
+		GRPCServerConfig: NewGRPCConfig(log),
 	}
 }
 
-// MustLoad loading parameters from the environment file
+// MustLoad loading parameters from the env file
 func MustLoad(filename string) {
 	_, err := os.Stat(filename)
 	if err != nil {

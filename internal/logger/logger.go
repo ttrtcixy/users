@@ -7,14 +7,12 @@ import (
 	"os"
 )
 
-//go:generate mockery --name=Logger
-
 type Logger interface {
-	Info(info string)
-	Error(err string)
-	ErrorOp(err string, op string)
-	Fatal(err string)
-	Debug(info string)
+	Info(format string, a ...any)
+	Error(format string, a ...any)
+	Fatal(format string, a ...any)
+	Debug(format string, a ...any)
+	Warning(format string, a ...any)
 }
 
 type slogLogger struct {
@@ -34,23 +32,23 @@ func Load() Logger {
 	return slogLogger{log: logger}
 }
 
-func (s slogLogger) Info(info string) {
-	s.log.Info(info)
+func (s slogLogger) Info(format string, a ...any) {
+	s.log.Info(fmt.Sprintf(format, a...))
 }
 
-func (s slogLogger) Error(err string) {
-	s.log.Error(err)
+func (s slogLogger) Error(format string, a ...any) {
+	s.log.Error(fmt.Sprintf(format, a...))
 }
 
-func (s slogLogger) ErrorOp(err string, op string) {
-	s.log.Error(fmt.Sprintf("%s: %s", op, err))
-}
-
-func (s slogLogger) Fatal(err string) {
-	s.log.Error(err)
+func (s slogLogger) Fatal(format string, a ...any) {
+	s.log.Error(fmt.Sprintf(format, a...))
 	os.Exit(1)
 }
 
-func (s slogLogger) Debug(info string) {
-	s.log.Debug(info)
+func (s slogLogger) Debug(format string, a ...any) {
+	s.log.Debug(fmt.Sprintf(format, a...))
+}
+
+func (s slogLogger) Warning(format string, a ...any) {
+	s.log.Warn(fmt.Sprintf(format, a...))
 }

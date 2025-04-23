@@ -10,7 +10,7 @@ import (
 type App struct {
 	wg         sync.WaitGroup
 	provider   *Provider
-	gRPCServer grpc.GRPCServer
+	gRPCServer *grpc.Server
 }
 
 func NewApp() *App {
@@ -20,11 +20,12 @@ func NewApp() *App {
 }
 
 func (a *App) Run(ctx context.Context) {
-	defer globalCloser.CloseAll()
+	defer a.provider.Closer().Close()
 
 	a.wg.Add(1)
 	go func() {
 		defer a.wg.Done()
+
 		err := a.startGRPCServer(ctx)
 		if err != nil {
 			log.Println(err)
@@ -35,5 +36,7 @@ func (a *App) Run(ctx context.Context) {
 }
 
 func (a *App) startGRPCServer(ctx context.Context) error {
+	a.gRPCServer = a.provider.GRPCServer()
+
 	return a.gRPCServer.Start(ctx, a.provider.Config().GRPCServerConfig)
 }

@@ -11,13 +11,13 @@ import (
 )
 
 // todo add query in prarams
-
-//go:generate mockery --name=DB
+// todo add connect
 
 type DB interface {
 	ExecContext(ctx context.Context, query Query) (sql.Result, error)
 	QueryContext(ctx context.Context, query Query) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query Query) *sql.Row
+	Close() error
 }
 
 type Query struct {
@@ -41,6 +41,10 @@ type db struct {
 	cfg       config.DBConfig
 	dbConnect *sql.DB
 	log       logger.Logger
+}
+
+func (db *db) Close() error {
+	return db.dbConnect.Close()
 }
 
 func (db *db) ExecContext(ctx context.Context, query Query) (sql.Result, error) {

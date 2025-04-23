@@ -24,11 +24,12 @@ type AuthUseCase struct {
 }
 
 func NewAuthUseCase(ctx context.Context, log logger.Logger, repo repository.Repository) *AuthUseCase {
-	return &AuthUseCase{
+	t := &AuthUseCase{
 		Signout: authusecase.NewSignout(ctx, log, repo),
 		Signup:  authusecase.NewSignup(ctx, log, repo),
 		Signin:  authusecase.NewSignin(ctx, log, repo),
 	}
+	return t
 }
 
 type UserUseCase struct {
