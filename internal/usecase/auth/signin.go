@@ -2,32 +2,26 @@ package authusecase
 
 import (
 	"context"
-	dtos "github.com/ttrtcixy/users-protos/gen/go/users"
 	"github.com/ttrtcixy/users/internal/entities"
 	"github.com/ttrtcixy/users/internal/logger"
+	"github.com/ttrtcixy/users/internal/usecase/ports"
 )
 
-type Signin interface {
-	Run(ctx context.Context, payload *dtos.SigninRequest) (*dtos.SigninResponse, error)
-}
-
-type signinRepository interface {
-	CheckUserPassword(ctx context.Context, user *entities.User) (*entities.User, error)
-}
-
-type signin struct {
+type SigninUseCase struct {
 	log  logger.Logger
-	repo signinRepository
+	repo ports.Repository
 }
 
-func NewSignin(ctx context.Context, log logger.Logger, repo signinRepository) Signin {
-	return &signin{
+func NewSignin(ctx context.Context, log logger.Logger, repo ports.Repository) *SigninUseCase {
+	return &SigninUseCase{
 		log:  log,
 		repo: repo,
 	}
 }
 
-func (s *signin) Run(ctx context.Context, payload *dtos.SigninRequest) (*dtos.SigninResponse, error) {
-	//TODO implement me
-	panic("implement me")
+func (u *SigninUseCase) Signin(ctx context.Context, payload *entities.SigninRequest) (*entities.SigninResponse, error) {
+	// todo check signin method(email/username)
+	// todo get user id by method + password
+	// todo generate and send tokens
+	return nil, nil
 }

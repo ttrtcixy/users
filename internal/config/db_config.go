@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/ttrtcixy/users/internal/logger"
+	"errors"
 	"os"
 )
 
@@ -10,21 +10,22 @@ type DBConfig interface {
 }
 
 type dbConfig struct {
-	path string
+	dsn string
 }
 
-func NewDbConfig(log logger.Logger) DBConfig {
+func NewDbConfig() (DBConfig, error) {
+	const op = "config.NewDbConfig"
 	var cfg = &dbConfig{}
 
-	if value, ok := os.LookupEnv("DB_PATH"); ok {
-		cfg.path = value
+	if value, ok := os.LookupEnv("DB_URL"); ok {
+		cfg.dsn = value
 	} else {
-		log.Error("[!] DB_PATH is not set")
+		return nil, errors.New("op: " + op + ", env parameter 'DB_URL' is not set")
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 func (c *dbConfig) DSN() string {
-	return c.path
+	return c.dsn
 }

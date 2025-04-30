@@ -7,16 +7,12 @@ import (
 	"github.com/ttrtcixy/users/internal/storage"
 )
 
-type Repository interface {
-	authrepo.AuthRepository
+type Repository struct {
+	*authrepo.AuthRepository
 }
 
-type repository struct {
-	authrepo.AuthRepository
-}
-
-func NewRepository(ctx context.Context, log logger.Logger, db storage.DB) Repository {
-	return &repository{
+func NewRepository(ctx context.Context, log logger.Logger, db storage.DB) *Repository {
+	return &Repository{
 		authrepo.NewAuthRepository(ctx, log, db),
 	}
 }

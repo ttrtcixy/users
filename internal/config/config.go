@@ -2,8 +2,8 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"github.com/goloop/env"
-	"github.com/ttrtcixy/users/internal/logger"
 	"os"
 )
 
@@ -18,31 +18,44 @@ func (c *Config) Close() error {
 	return nil
 }
 
-// NewConfig load parameters from the env file and return Config
-func NewConfig(log logger.Logger) *Config {
-	MustLoad(log, ".env")
+// New load parameters from the env file and return Config
+func New() (*Config, error) {
+	err := MustLoad(".env")
+	if err != nil {
+		return nil, err
+	}
+
+	dbCfg, err := NewDbConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	grpcGfg, err := NewGRPCConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	return &Config{
-		DBConfig:         NewDbConfig(log),
-		GRPCServerConfig: NewGRPCConfig(log),
-	}
+		DBConfig:         dbCfg,
+		GRPCServerConfig: grpcGfg,
+	}, nil
 }
 
 // MustLoad loading parameters from the env file
-func MustLoad(log logger.Logger, filename string) {
+func MustLoad(filename string) error {
+	const op = "config.MustLoad"
 	_, err := os.Stat(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			log.Fatal("file %s does not exist", filename)
+			return fmt.Errorf("op: %s, file: %s does not exist", op, filename)
 		} else {
-			log.Fatal(err.Error())
+			return err
 		}
 	}
 
 	err = env.Load(filename)
 	if err != nil {
-		log.Fatal("Incorrect data in the configuration file: %s", err.Error())
+		return fmt.Errorf("op: %s,incorrect data in the configuration file: %s", op, err.Error())
 	}
-
-	log.Info("the configuration file '%s' has been uploaded successfully", filename)
+	return nil
 }

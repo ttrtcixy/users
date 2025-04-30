@@ -5,12 +5,13 @@ import (
 	usersProtos "github.com/ttrtcixy/users-protos/gen/go/users"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/delivery/grpc/auth"
+	"github.com/ttrtcixy/users/internal/delivery/grpc/middleware"
+	"github.com/ttrtcixy/users/internal/delivery/grpc/ports"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"net"
 
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/usecase"
 )
 
 type Server struct {
@@ -28,7 +29,7 @@ func (s *Server) register(gRPC *grpc.Server) {
 	usersProtos.RegisterUsersServer(gRPC, s.userService)
 }
 
-func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase *usecase.UseCase) *Server {
+func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase ports.UseCase) *Server {
 	return &Server{
 		log:             log,
 		cfg:             cfg,
@@ -39,7 +40,9 @@ func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase *usec
 func (s *Server) Start(ctx context.Context) (err error) {
 	s.log.Info("[*] starting gRPC server on %s", s.cfg.Addr())
 
-	s.srv = grpc.NewServer()
+	s.srv = grpc.NewServer(
+		grpc.UnaryInterceptor(middleware.RecoveryUnaryInterceptor(s.log)),
+	)
 	s.register(s.srv)
 	s.l, err = net.Listen(s.cfg.Network(), s.cfg.Addr())
 	if err != nil {

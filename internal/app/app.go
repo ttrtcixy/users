@@ -2,17 +2,18 @@ package app
 
 import (
 	"context"
+	"github.com/ttrtcixy/users/internal/app/provider"
 	"sync"
 )
 
 type App struct {
 	wg sync.WaitGroup
-	*Provider
+	*provider.Provider
 }
 
 func NewApp() *App {
 	return &App{
-		Provider: NewProvider(),
+		Provider: provider.NewProvider(),
 	}
 }
 

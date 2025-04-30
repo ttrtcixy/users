@@ -2,30 +2,23 @@ package authusecase
 
 import (
 	"context"
-	dtos "github.com/ttrtcixy/users-protos/gen/go/users"
+	"github.com/ttrtcixy/users/internal/entities"
 	"github.com/ttrtcixy/users/internal/logger"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"github.com/ttrtcixy/users/internal/usecase/ports"
 )
 
-type Signout interface {
-	Run(ctx context.Context, payload *dtos.SignoutRequest) (*emptypb.Empty, error)
-}
-
-type signoutRepository interface {
-}
-
-type signout struct {
+type SignoutUseCase struct {
 	log  logger.Logger
-	repo signoutRepository
+	repo ports.Repository
 }
 
-func NewSignout(ctx context.Context, log logger.Logger, repo signoutRepository) Signout {
-	return &signout{
+func NewSignout(ctx context.Context, log logger.Logger, repo ports.Repository) *SignoutUseCase {
+	return &SignoutUseCase{
 		log:  log,
 		repo: repo,
 	}
 }
 
-func (l *signout) Run(ctx context.Context, payload *dtos.SignoutRequest) (*emptypb.Empty, error) {
-	return nil, nil
+func (u *SignoutUseCase) Signout(ctx context.Context, payload *entities.SignoutRequest) error {
+	return nil
 }

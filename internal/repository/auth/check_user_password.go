@@ -5,7 +5,6 @@ import (
 	"github.com/ttrtcixy/users/internal/entities"
 )
 
-func (u *authRepository) CheckUserPassword(ctx context.Context, user *entities.User) (*entities.User, error) {
-	//TODO implement me
-	panic("implement me")
+func (r *AuthRepository) CheckUserPassword(ctx context.Context, user *entities.User) (bool, error) {
+	return false, nil
 }

@@ -1,4 +1,4 @@
-package app
+package provider
 
 import (
 	"context"
@@ -14,17 +14,17 @@ import (
 
 type Provider struct {
 	logger logger.Logger
-	cfg    *config.Config
+	closer closer.Closer
+
+	cfg *config.Config
 
 	db storage.DB
 
 	useCase *usecase.UseCase
 
-	repository repository.Repository
+	repository *repository.Repository
 
 	grpcServer *grpc.Server
-
-	closer closer.Closer
 }
 
 func NewProvider() *Provider {
@@ -49,18 +49,25 @@ func (p *Provider) Logger() logger.Logger {
 
 func (p *Provider) Config() *config.Config {
 	if p.cfg == nil {
-		p.cfg = config.NewConfig(p.Logger())
+		cfg, err := config.New()
+		if err != nil {
+			p.Logger().Error("[!] %s", err.Error())
+			p.Closer().Close()
+		}
 
+		p.cfg = cfg
 		p.Closer().Add(
 			"env clear",
 			p.cfg.Close,
 		)
+
+		p.Logger().Info("[+] config loaded")
 	}
 
 	return p.cfg
 }
 
-func (p *Provider) Repository() repository.Repository {
+func (p *Provider) Repository() *repository.Repository {
 	if p.repository == nil {
 		p.repository = repository.NewRepository(context.Background(), p.Logger(), p.DB())
 	}
@@ -69,12 +76,18 @@ func (p *Provider) Repository() repository.Repository {
 
 func (p *Provider) DB() storage.DB {
 	if p.db == nil {
-		p.db = storage.NewDB(context.Background(), p.Logger(), p.Config().DBConfig)
+		db, err := storage.New(context.Background(), p.Logger(), p.Config().DBConfig)
+		if err != nil {
+			p.Logger().Error("[!] %s", err.Error())
+			p.Closer().Close()
+		}
 
+		p.db = db
 		p.Closer().Add(
 			"db connect close",
 			p.db.Close,
 		)
+		p.Logger().Info("[+] db connected")
 	}
 	return p.db
 }
@@ -86,6 +99,7 @@ func (p *Provider) GRPCServer() *grpc.Server {
 			"grpc server close",
 			p.grpcServer.Close,
 		)
+		p.Logger().Info("[+] grpc server started")
 	}
 	return p.grpcServer
 }

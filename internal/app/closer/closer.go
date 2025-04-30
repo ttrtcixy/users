@@ -26,6 +26,7 @@ type Logger interface {
 
 type Closer interface {
 	Add(name string, close func() error)
+	Tasks() tasks
 	Close()
 }
 
@@ -64,7 +65,6 @@ func New(config ...Config) Closer {
 			cfg = config[0]
 		}
 
-		// Валидация параметров
 		if cfg.TotalDuration < 0 {
 			cfg.TotalDuration = 0
 		}
@@ -108,6 +108,11 @@ func (c *closer) Close() {
 	defer c.mu.Unlock()
 
 	c.log.Info("[*] closer is starting to close tasks")
+
+	if len(c.tasks) == 0 {
+		c.log.Info("[*] no tasks to close")
+		os.Exit(0)
+	}
 
 	timer := time.Now()
 
@@ -188,4 +193,8 @@ func (c *closer) closeWithTimeout(globalCtx context.Context, t task) error {
 	case err := <-done:
 		return err
 	}
+}
+
+func (c *closer) Tasks() tasks {
+	return c.tasks
 }

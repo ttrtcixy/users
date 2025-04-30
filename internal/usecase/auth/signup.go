@@ -2,30 +2,49 @@ package authusecase
 
 import (
 	"context"
-	dtos "github.com/ttrtcixy/users-protos/gen/go/users"
+	"errors"
+	"fmt"
+	"github.com/ttrtcixy/users/internal/entities"
 	"github.com/ttrtcixy/users/internal/logger"
+	"github.com/ttrtcixy/users/internal/usecase/ports"
+	"strings"
 )
 
-type Signup interface {
-	Run(ctx context.Context, payload *dtos.SignupRequest) (*dtos.SignupResponse, error)
-}
-
-type signupRepository interface {
-}
-
-type signup struct {
+type SignupUseCase struct {
 	log  logger.Logger
-	repo signupRepository
+	repo ports.SignupRepository
 }
 
-func NewSignup(ctx context.Context, log logger.Logger, repo signupRepository) Signup {
-	return &signup{
+func NewSignup(ctx context.Context, log logger.Logger, repo ports.SignupRepository) *SignupUseCase {
+	return &SignupUseCase{
 		log:  log,
 		repo: repo,
 	}
 }
 
-func (l *signup) Run(ctx context.Context, payload *dtos.SignupRequest) (*dtos.SignupResponse, error) {
-	//TODO implement me
-	panic("implement me")
+func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequest) (*entities.SignupResponse, error) {
+	// todo check username or email exists
+	exists, err := u.repo.CheckLoginExist(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	if exists.Status {
+		var str strings.Builder
+		if exists.UsernameExists {
+			str.WriteString(fmt.Sprintf("username: %s, exists; ", payload.Username))
+		}
+		if exists.EmailExists {
+			str.WriteString(fmt.Sprintf("email: %s, exists; ", payload.Email))
+		}
+
+		return nil, errors.New(str.String())
+	}
+
+	// todo hash password
+	// todo add new user
+	// todo check user email
+	// todo generate and send tokens
+
+	return nil, nil
 }
