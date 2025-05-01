@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"runtime/debug"
 )
 
 func RecoveryUnaryInterceptor(log logger.Logger) grpc.UnaryServerInterceptor {
@@ -15,6 +16,7 @@ func RecoveryUnaryInterceptor(log logger.Logger) grpc.UnaryServerInterceptor {
 			if r := recover(); r != nil {
 				e := fmt.Errorf("panic in %s: %v", info.FullMethod, r)
 				log.Error(e.Error())
+				debug.PrintStack()
 				err = status.Error(codes.Internal, "internal server error")
 			}
 		}(log)

@@ -26,6 +26,8 @@ func NewSignup(log logger.Logger, usecase ports.SignupUseCase) *SignupService {
 	}
 }
 
+// todo добавить валидацию сюда
+//
 func (s *SignupService) Signup(ctx context.Context, payload *dtos.SignupRequest) (*dtos.SignupResponse, error) {
 	if err := s.validate(payload); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
