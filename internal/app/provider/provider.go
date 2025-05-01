@@ -33,7 +33,7 @@ func NewProvider() *Provider {
 
 func (p *Provider) UseCase() *usecase.UseCase {
 	if p.useCase == nil {
-		p.useCase = usecase.NewUseCase(context.Background(), p.Logger(), p.Repository())
+		p.useCase = usecase.NewUseCase(context.Background(), p.Logger(), p.Repository(), p.Config())
 	}
 
 	return p.useCase

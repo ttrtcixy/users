@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/logger"
-	"strings"
 )
 
 type DB interface {
@@ -17,21 +16,11 @@ type DB interface {
 	Close() error
 }
 
-type Query struct {
-	QueryName string
-	Query     string
-	Args      []any
-}
-
-func (q *Query) String() string {
-	queryString := fmt.Sprintf("sql: %s: query: %s", q.QueryName, q.Query)
-	if len(q.Args) != 0 {
-		for k, v := range q.Args {
-			queryString = strings.Replace(queryString, fmt.Sprintf("$%d", k+1), fmt.Sprintf("%v", v), 1)
-		}
-	}
-
-	return queryString
+type Query interface {
+	QueryName() string
+	Query() string
+	Args() []any
+	String() string
 }
 
 type db struct {
@@ -46,15 +35,15 @@ func (db *db) Close() error {
 
 func (db *db) Exec(ctx context.Context, query Query) (pgconn.CommandTag, error) {
 	db.logQuery(query)
-	return db.connect.Exec(ctx, query.Query, query.Args...)
+	return db.connect.Exec(ctx, query.Query(), query.Args()...)
 }
 func (db *db) Query(ctx context.Context, query Query) (pgx.Rows, error) {
 	db.logQuery(query)
-	return db.connect.Query(ctx, query.Query, query.Args...)
+	return db.connect.Query(ctx, query.Query(), query.Args()...)
 }
 func (db *db) QueryRow(ctx context.Context, query Query) pgx.Row {
 	db.logQuery(query)
-	return db.connect.QueryRow(ctx, query.Query, query.Args...)
+	return db.connect.QueryRow(ctx, query.Query(), query.Args()...)
 }
 
 func New(ctx context.Context, log logger.Logger, cfg config.DBConfig) (DB, error) {

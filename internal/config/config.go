@@ -11,6 +11,7 @@ import (
 type Config struct {
 	DBConfig         DBConfig
 	GRPCServerConfig GRPCServerConfig
+	UsecaseConfig    UsecaseConfig
 }
 
 func (c *Config) Close() error {
@@ -35,9 +36,15 @@ func New() (*Config, error) {
 		return nil, err
 	}
 
+	ucCfg, err := NewUsecaseConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		DBConfig:         dbCfg,
 		GRPCServerConfig: grpcGfg,
+		UsecaseConfig:    ucCfg,
 	}, nil
 }
 

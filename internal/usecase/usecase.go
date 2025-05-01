@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/logger"
 	"github.com/ttrtcixy/users/internal/usecase/auth"
 	"github.com/ttrtcixy/users/internal/usecase/ports"
@@ -12,9 +13,9 @@ type UseCase struct {
 	*UserUseCase
 }
 
-func NewUseCase(ctx context.Context, log logger.Logger, repo ports.Repository) *UseCase {
+func NewUseCase(ctx context.Context, log logger.Logger, repo ports.Repository, cfg *config.Config) *UseCase {
 	return &UseCase{
-		NewAuthUseCase(ctx, log, repo),
+		NewAuthUseCase(ctx, log, repo, cfg),
 		NewUserUseCase(ctx, log, repo),
 	}
 }
@@ -25,10 +26,10 @@ type AuthUseCase struct {
 	*authusecase.SigninUseCase
 }
 
-func NewAuthUseCase(ctx context.Context, log logger.Logger, repo ports.Repository) *AuthUseCase {
+func NewAuthUseCase(ctx context.Context, log logger.Logger, repo ports.Repository, cfg *config.Config) *AuthUseCase {
 	return &AuthUseCase{
 		SignoutUseCase: authusecase.NewSignout(ctx, log, repo),
-		SignupUseCase:  authusecase.NewSignup(ctx, log, repo),
+		SignupUseCase:  authusecase.NewSignup(ctx, log, repo, cfg.UsecaseConfig),
 		SigninUseCase:  authusecase.NewSignin(ctx, log, repo),
 	}
 }
