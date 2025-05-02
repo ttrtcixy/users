@@ -16,7 +16,7 @@ import (
 
 type Server struct {
 	log logger.Logger
-	cfg config.GRPCServerConfig
+	cfg *config.GRPCServerConfig
 
 	srv             *grpc.Server
 	l               net.Listener
@@ -29,7 +29,7 @@ func (s *Server) register(gRPC *grpc.Server) {
 	usersProtos.RegisterUsersServer(gRPC, s.userService)
 }
 
-func NewGRPCServer(log logger.Logger, cfg config.GRPCServerConfig, usecase ports.UseCase) *Server {
+func NewGRPCServer(log logger.Logger, cfg *config.GRPCServerConfig, usecase ports.UseCase) *Server {
 	return &Server{
 		log:             log,
 		cfg:             cfg,

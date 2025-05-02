@@ -5,13 +5,36 @@ import (
 	"fmt"
 	"github.com/goloop/env"
 	"os"
+	"strings"
 )
+
+type ErrEnvVariableNotFound struct {
+	Fields []error
+}
+
+func (e *ErrEnvVariableNotFound) Error() string {
+	if len(e.Fields) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("missing or invalid configuration:\n")
+	for _, err := range e.Fields {
+		sb.WriteString(" - ")
+		sb.WriteString(err.Error())
+		sb.WriteString("\n")
+	}
+	return sb.String()
+}
+
+func (e *ErrEnvVariableNotFound) Add(err error) {
+	e.Fields = append(e.Fields, err)
+}
 
 // Config struct
 type Config struct {
-	DBConfig         DBConfig
-	GRPCServerConfig GRPCServerConfig
-	UsecaseConfig    UsecaseConfig
+	DBConfig         *DBConfig
+	GRPCServerConfig *GRPCServerConfig
+	UsecaseConfig    *UsecaseConfig
 }
 
 func (c *Config) Close() error {
@@ -25,27 +48,21 @@ func New() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	var cfg = &Config{}
 
-	dbCfg, err := NewDbConfig()
-	if err != nil {
-		return nil, err
+	var fErr = &ErrEnvVariableNotFound{}
+
+	cfg.LoadDbConfig(fErr)
+
+	cfg.LoadGRPCConfig(fErr)
+
+	cfg.LoadUsecaseConfig(fErr)
+
+	if fErr.Fields != nil {
+		return nil, fErr
 	}
 
-	grpcGfg, err := NewGRPCConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	ucCfg, err := NewUsecaseConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return &Config{
-		DBConfig:         dbCfg,
-		GRPCServerConfig: grpcGfg,
-		UsecaseConfig:    ucCfg,
-	}, nil
+	return cfg, nil
 }
 
 // MustLoad loading parameters from the env file

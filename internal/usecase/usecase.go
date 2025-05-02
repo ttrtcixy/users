@@ -29,7 +29,7 @@ type AuthUseCase struct {
 func NewAuthUseCase(ctx context.Context, log logger.Logger, repo ports.Repository, cfg *config.Config) *AuthUseCase {
 	return &AuthUseCase{
 		SignoutUseCase: authusecase.NewSignout(ctx, log, repo),
-		SignupUseCase:  authusecase.NewSignup(ctx, log, repo, cfg.UsecaseConfig),
+		SignupUseCase:  authusecase.NewSignup(ctx, log, cfg.UsecaseConfig, repo),
 		SigninUseCase:  authusecase.NewSignin(ctx, log, repo),
 	}
 }

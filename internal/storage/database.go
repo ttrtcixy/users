@@ -24,7 +24,7 @@ type Query interface {
 }
 
 type db struct {
-	cfg     config.DBConfig
+	cfg     *config.DBConfig
 	connect *pgx.Conn
 	log     logger.Logger
 }
@@ -46,7 +46,7 @@ func (db *db) QueryRow(ctx context.Context, query Query) pgx.Row {
 	return db.connect.QueryRow(ctx, query.Query(), query.Args()...)
 }
 
-func New(ctx context.Context, log logger.Logger, cfg config.DBConfig) (DB, error) {
+func New(ctx context.Context, log logger.Logger, cfg *config.DBConfig) (DB, error) {
 	const op = "storage.New"
 	connect, err := pgx.Connect(ctx, cfg.DSN())
 	if err != nil {

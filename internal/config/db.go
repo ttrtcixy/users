@@ -1,31 +1,31 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 	"os"
 )
 
-type DBConfig interface {
-	DSN() string
-}
+//type DBConfig interface {
+//	DSN() string
+//}
 
-type dbConfig struct {
+type DBConfig struct {
 	dsn string
 }
 
-func NewDbConfig() (DBConfig, error) {
+func (c *Config) LoadDbConfig(fErr *ErrEnvVariableNotFound) {
 	const op = "config.NewDbConfig"
-	var cfg = &dbConfig{}
+	cfg := &DBConfig{}
 
 	if value, ok := os.LookupEnv("DB_URL"); ok {
 		cfg.dsn = value
 	} else {
-		return nil, errors.New("op: " + op + ", env parameter 'DB_URL' is not set")
+		fErr.Add(fmt.Errorf("%s: env variable 'DB_URL' is not set", op))
 	}
 
-	return cfg, nil
+	c.DBConfig = cfg
 }
 
-func (c *dbConfig) DSN() string {
-	return c.dsn
+func (cfg *DBConfig) DSN() string {
+	return cfg.dsn
 }

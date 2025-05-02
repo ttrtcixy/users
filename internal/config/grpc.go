@@ -5,56 +5,56 @@ import (
 	"os"
 )
 
-type GRPCServerConfig interface {
-	Addr() string
-	Port() string
-	Host() string
-	Network() string
-}
+//type GRPCServerConfig interface {
+//	Addr() string
+//	Port() string
+//	Host() string
+//	Network() string
+//}
 
-type gRPCServerConfig struct {
+type GRPCServerConfig struct {
 	host    string
 	port    string
 	network string
 }
 
-func NewGRPCConfig() (GRPCServerConfig, error) {
+func (c *Config) LoadGRPCConfig(fErr *ErrEnvVariableNotFound) {
 	const op = "config.NewGRPCConfig"
-	var cfg = &gRPCServerConfig{}
+	cfg := &GRPCServerConfig{}
 
 	if value, ok := os.LookupEnv("GRPC_HOST"); ok {
 		cfg.host = value
 	} else {
-		return nil, fmt.Errorf("op: %s, env variable 'GRPC_HOST' is not set", op)
+		fErr.Add(fmt.Errorf("%s: env variable 'GRPC_HOST' is not set", op))
 	}
 
 	if value, ok := os.LookupEnv("GRPC_PORT"); ok {
 		cfg.port = value
 	} else {
-		return nil, fmt.Errorf("op: %s, env variable 'GRPC_PORT' is not set", op)
+		fErr.Add(fmt.Errorf("%s: env variable 'GRPC_PORT' is not set", op))
 	}
 
 	if value, ok := os.LookupEnv("GRPC_NETWORK"); ok {
 		cfg.network = value
 	} else {
-		return nil, fmt.Errorf("op: %s, env variable 'GRPC_NETWORK' is not set", op)
+		fErr.Add(fmt.Errorf("%s: env variable 'GRPC_NETWORK' is not set", op))
 	}
 
-	return cfg, nil
+	c.GRPCServerConfig = cfg
 }
 
-func (c *gRPCServerConfig) Addr() string {
+func (c *GRPCServerConfig) Addr() string {
 	return fmt.Sprintf("%s:%s", c.host, c.port)
 }
 
-func (c *gRPCServerConfig) Port() string {
+func (c *GRPCServerConfig) Port() string {
 	return c.port
 }
 
-func (c *gRPCServerConfig) Host() string {
+func (c *GRPCServerConfig) Host() string {
 	return c.host
 }
 
-func (c *gRPCServerConfig) Network() string {
+func (c *GRPCServerConfig) Network() string {
 	return c.network
 }
