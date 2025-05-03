@@ -4,16 +4,44 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/logger"
 )
 
 type DB interface {
-	Exec(ctx context.Context, query Query) (pgconn.CommandTag, error)
-	Query(ctx context.Context, query Query) (pgx.Rows, error)
-	QueryRow(ctx context.Context, query Query) pgx.Row
+	Exec(ctx context.Context, query Query) (CommandTag, error)
+	Query(ctx context.Context, query Query) (Rows, error)
+	QueryRow(ctx context.Context, query Query) Row
 	Close() error
+}
+
+type Transaction interface {
+}
+
+type CommandTag interface {
+	RowsAffected() int64
+}
+
+type Rows interface {
+	Next() bool
+	Scan(dest ...interface{}) error
+	Close()
+	Err() error
+	CommandTag() CommandTag
+	Values() ([]any, error)
+	RawValues() [][]byte
+}
+
+type Row interface {
+	Scan(dest ...interface{}) error
+}
+
+type rows struct {
+	pgx.Rows
+}
+
+func (r *rows) CommandTag() CommandTag {
+	return r.Rows.CommandTag()
 }
 
 type Query interface {
@@ -33,15 +61,21 @@ func (db *db) Close() error {
 	return db.connect.Close(context.Background())
 }
 
-func (db *db) Exec(ctx context.Context, query Query) (pgconn.CommandTag, error) {
+func (db *db) Exec(ctx context.Context, query Query) (CommandTag, error) {
 	db.logQuery(query)
 	return db.connect.Exec(ctx, query.Query(), query.Args()...)
 }
-func (db *db) Query(ctx context.Context, query Query) (pgx.Rows, error) {
+func (db *db) Query(ctx context.Context, query Query) (Rows, error) {
 	db.logQuery(query)
-	return db.connect.Query(ctx, query.Query(), query.Args()...)
+	rw, err := db.connect.Query(ctx, query.Query(), query.Args()...)
+	if err != nil {
+		return nil, err
+	}
+	return &rows{rw}, nil
+
+	//return db.connect.Query(ctx, query.Query(), query.Args()...)
 }
-func (db *db) QueryRow(ctx context.Context, query Query) pgx.Row {
+func (db *db) QueryRow(ctx context.Context, query Query) Row {
 	db.logQuery(query)
 	return db.connect.QueryRow(ctx, query.Query(), query.Args()...)
 }
