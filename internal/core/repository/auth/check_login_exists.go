@@ -2,8 +2,8 @@ package authrepo
 
 import (
 	"context"
-	"github.com/ttrtcixy/users/internal/entities"
-	"github.com/ttrtcixy/users/internal/repository/query"
+	"github.com/ttrtcixy/users/internal/core/entities"
+	"github.com/ttrtcixy/users/internal/core/repository/query"
 )
 
 var req = "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1) AS username_exists, EXISTS(SELECT 1 FROM users WHERE email = $2) AS email_exists;"

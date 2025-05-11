@@ -1,4 +1,4 @@
-package grpc
+package apperrors
 
 import (
 	"errors"
@@ -30,8 +30,7 @@ func (e *ValidationErrors) Error() string {
 	for _, v := range *e {
 		err.WriteString(v.Field)
 		err.WriteString(": ")
-		err.WriteString(v.Err.Error())
-		err.WriteString("\n")
+		err.WriteString(v.Err.Error() + "; ")
 	}
-	return err.String()
+	return strings.TrimSpace(err.String())
 }

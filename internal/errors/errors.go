@@ -18,5 +18,5 @@ func (e *ErrLoginExists) Error() string {
 	if e.Email != "" {
 		str.WriteString(fmt.Sprintf("email: %s, exists; ", e.Email))
 	}
-	return str.String()
+	return strings.TrimSpace(str.String())
 }

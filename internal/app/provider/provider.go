@@ -4,11 +4,12 @@ import (
 	"context"
 	"github.com/ttrtcixy/users/internal/app/closer"
 	"github.com/ttrtcixy/users/internal/config"
+	"github.com/ttrtcixy/users/internal/core/repository"
+	"github.com/ttrtcixy/users/internal/core/usecase"
 	"github.com/ttrtcixy/users/internal/delivery/grpc"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/repository"
-	"github.com/ttrtcixy/users/internal/storage"
-	"github.com/ttrtcixy/users/internal/usecase"
+	"github.com/ttrtcixy/users/internal/smtp"
+	storage "github.com/ttrtcixy/users/internal/storage/pg"
 	"time"
 )
 
@@ -18,7 +19,8 @@ type Provider struct {
 
 	cfg *config.Config
 
-	db storage.DB
+	db   storage.DB
+	smtp smtp.Smtp
 
 	useCase *usecase.UseCase
 
@@ -33,7 +35,7 @@ func NewProvider() *Provider {
 
 func (p *Provider) UseCase() *usecase.UseCase {
 	if p.useCase == nil {
-		p.useCase = usecase.NewUseCase(context.Background(), p.Logger(), p.Repository(), p.Config())
+		p.useCase = usecase.NewUseCase(context.Background(), p.Logger(), p.Repository(), p.Config(), p.Smtp())
 	}
 
 	return p.useCase
@@ -45,6 +47,14 @@ func (p *Provider) Logger() logger.Logger {
 	}
 
 	return p.logger
+}
+
+func (p *Provider) Smtp() smtp.Smtp {
+	if p.smtp == nil {
+		p.smtp = smtp.New(p.Config().SmtpConfig)
+	}
+
+	return p.smtp
 }
 
 func (p *Provider) Config() *config.Config {

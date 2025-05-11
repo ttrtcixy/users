@@ -3,7 +3,7 @@ package authrepo
 import (
 	"context"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/storage"
+	"github.com/ttrtcixy/users/internal/storage/pg"
 )
 
 type AuthRepository struct {

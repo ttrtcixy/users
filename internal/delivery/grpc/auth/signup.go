@@ -3,9 +3,10 @@ package grpcauthservise
 import (
 	"context"
 	"errors"
-	dtos "github.com/ttrtcixy/users-protos/gen/go/users"
+	dtos "github.com/ttrtcixy/users-protos/gen/go/gen/go/users"
+	"github.com/ttrtcixy/users/internal/core/entities"
+	"github.com/ttrtcixy/users/internal/delivery/errors"
 	"github.com/ttrtcixy/users/internal/delivery/grpc/ports"
-	"github.com/ttrtcixy/users/internal/entities"
 	"github.com/ttrtcixy/users/internal/logger"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,17 +34,12 @@ func (s *SignupService) Signup(ctx context.Context, payload *dtos.SignupRequest)
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	result, err := s.usecase.Signup(ctx, s.DTOToEntity(payload))
+	err := s.usecase.Signup(ctx, s.DTOToEntity(payload))
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	s.log.Info("%v, %v", result.AccessToken, result.RefreshToken)
-	return nil, nil
 
-	//return &dtos.SignupResponse{
-	//	AccessToken:  result.AccessToken,
-	//	RefreshToken: result.RefreshToken,
-	//}, nil
+	return nil, status.Error(codes.OK, "check email, to confirm registration")
 }
 
 func (s *SignupService) DTOToEntity(payload *dtos.SignupRequest) *entities.SignupRequest {
@@ -59,20 +55,25 @@ func (s *SignupService) validate(payload *dtos.SignupRequest) error {
 	username := payload.GetUsername()
 	password := payload.GetPassword()
 
+	var validationErr = &apperrors.ValidationErrors{}
 	if email == "" || username == "" {
 		return errors.New("email and username is required")
 	}
 
 	if err := s.emailValidate(email); err != nil {
-		return err
+		validationErr.Add("email", err.Error())
 	}
 
 	if err := s.usernameValidate(username); err != nil {
-		return err
+		validationErr.Add("username", err.Error())
 	}
 
 	if err := s.passwordValidate(password); err != nil {
-		return err
+		validationErr.Add("password", err.Error())
+	}
+
+	if len(*validationErr) > 0 {
+		return validationErr
 	}
 	return nil
 }

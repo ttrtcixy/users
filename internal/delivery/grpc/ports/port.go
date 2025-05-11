@@ -2,7 +2,7 @@ package ports
 
 import (
 	"context"
-	"github.com/ttrtcixy/users/internal/entities"
+	"github.com/ttrtcixy/users/internal/core/entities"
 )
 
 type SigninUseCase interface {
@@ -10,7 +10,7 @@ type SigninUseCase interface {
 }
 
 type SignupUseCase interface {
-	Signup(ctx context.Context, payload *entities.SignupRequest) (*entities.SignupResponse, error)
+	Signup(ctx context.Context, payload *entities.SignupRequest) error
 }
 
 type SignoutUseCase interface {

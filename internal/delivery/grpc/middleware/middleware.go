@@ -18,6 +18,7 @@ func RecoveryUnaryInterceptor(log logger.Logger) grpc.UnaryServerInterceptor {
 				err = status.Error(codes.Internal, "internal server error")
 			}
 		}(log)
+
 		return handler(ctx, req)
 	}
 }

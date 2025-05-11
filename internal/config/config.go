@@ -35,6 +35,7 @@ type Config struct {
 	DBConfig         *DBConfig
 	GRPCServerConfig *GRPCServerConfig
 	UsecaseConfig    *UsecaseConfig
+	SmtpConfig       *SmtpConfig
 }
 
 func (c *Config) Close() error {
@@ -57,6 +58,8 @@ func New() (*Config, error) {
 	cfg.LoadGRPCConfig(fErr)
 
 	cfg.LoadUsecaseConfig(fErr)
+
+	cfg.LoadSmtpConfig(fErr)
 
 	if fErr.Fields != nil {
 		return nil, fErr

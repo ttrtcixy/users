@@ -2,17 +2,17 @@ package authusecase
 
 import (
 	"context"
-	"github.com/ttrtcixy/users/internal/entities"
+	"github.com/ttrtcixy/users/internal/core/entities"
+	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/usecase/ports"
 )
 
 type SigninUseCase struct {
 	log  logger.Logger
-	repo ports.Repository
+	repo usecaseports.SigninRepository
 }
 
-func NewSignin(ctx context.Context, log logger.Logger, repo ports.Repository) *SigninUseCase {
+func NewSignin(ctx context.Context, log logger.Logger, repo usecaseports.Repository) *SigninUseCase {
 	return &SigninUseCase{
 		log:  log,
 		repo: repo,
