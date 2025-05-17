@@ -8,7 +8,7 @@ import (
 	"github.com/ttrtcixy/users/internal/core/usecase"
 	"github.com/ttrtcixy/users/internal/delivery/grpc"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/smtp"
+	"github.com/ttrtcixy/users/internal/service/smtp"
 	storage "github.com/ttrtcixy/users/internal/storage/pg"
 	"time"
 )

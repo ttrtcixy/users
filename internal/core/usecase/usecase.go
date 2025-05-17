@@ -6,7 +6,7 @@ import (
 	"github.com/ttrtcixy/users/internal/core/usecase/auth"
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/smtp"
+	"github.com/ttrtcixy/users/internal/service/smtp"
 )
 
 type UseCase struct {
@@ -25,6 +25,7 @@ type AuthUseCase struct {
 	*authusecase.SignoutUseCase
 	*authusecase.SignupUseCase
 	*authusecase.SigninUseCase
+	*authusecase.VerifyUseCase
 }
 
 func NewAuthUseCase(ctx context.Context, log logger.Logger, repo usecaseports.Repository, cfg *config.Config, smtp smtp.Smtp) *AuthUseCase {
@@ -32,6 +33,7 @@ func NewAuthUseCase(ctx context.Context, log logger.Logger, repo usecaseports.Re
 		SignoutUseCase: authusecase.NewSignout(ctx, log, repo),
 		SignupUseCase:  authusecase.NewSignup(ctx, cfg.UsecaseConfig, log, repo, smtp),
 		SigninUseCase:  authusecase.NewSignin(ctx, log, repo),
+		VerifyUseCase:  authusecase.NewVerify(ctx, cfg.UsecaseConfig, log, repo),
 	}
 }
 

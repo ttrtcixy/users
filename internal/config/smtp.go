@@ -50,7 +50,7 @@ func (c *Config) LoadSmtpConfig(fErr *ErrEnvVariableNotFound) {
 	c.SmtpConfig = cfg
 }
 func (c *SmtpConfig) Addr() string {
-	return fmt.Sprintf("%s:%d", cfg.Host(), cfg.Port())
+	return fmt.Sprintf("%s:%d", c.Host(), c.Port())
 }
 
 func (c *SmtpConfig) Host() string {

@@ -11,6 +11,7 @@ type UserAuthService struct {
 	*SigninService
 	*SignupService
 	*SignoutService
+	*VerifyService
 	usersProtos.UnsafeUsersAuthServer
 }
 
@@ -19,5 +20,6 @@ func NewUserAuthService(ctx context.Context, log logger.Logger, usecase ports.Us
 		SigninService:  NewSignin(log, usecase),
 		SignupService:  NewSignup(log, usecase),
 		SignoutService: NewSignout(log, usecase),
+		VerifyService:  NewVerify(log, usecase),
 	}
 }

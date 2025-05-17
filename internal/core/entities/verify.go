@@ -1,8 +1,7 @@
 package entities
 
 type VerifyRequest struct {
-	email string
-	token string
+	JwtToken string
 }
 
 type VerifyResponse struct {

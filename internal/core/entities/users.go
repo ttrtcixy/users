@@ -1,8 +1,12 @@
 package entities
 
 type User struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	ID           int64
+	Username     string
+	Email        string
+	Password     string
+	IsActive     bool
+	RoleId       int
+	PasswordHash string
+	PasswordSalt string
 }

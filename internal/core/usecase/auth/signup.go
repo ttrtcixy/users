@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/ttrtcixy/users/internal/config"
@@ -12,7 +13,7 @@ import (
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	"github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/smtp"
+	"github.com/ttrtcixy/users/internal/service/smtp"
 	"time"
 )
 
@@ -21,6 +22,11 @@ type SignupUseCase struct {
 	log  logger.Logger
 	repo usecaseports.SignupRepository
 	smtp smtp.Smtp
+}
+
+type EmailVerificationClaims struct {
+	Email string `json:"email"`
+	jwt.RegisteredClaims
 }
 
 func NewSignup(ctx context.Context, cfg *config.UsecaseConfig, log logger.Logger, repo usecaseports.SignupRepository, smtp smtp.Smtp) *SignupUseCase {
@@ -32,8 +38,10 @@ func NewSignup(ctx context.Context, cfg *config.UsecaseConfig, log logger.Logger
 	}
 }
 
+const op = "SignupUseCase.Signup"
+
 func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequest) (err error) {
-	return u.repo.RunInTx(ctx, func(ctx context.Context) error {
+	err = u.repo.RunInTx(ctx, func(ctx context.Context) error {
 		if err := u.validPayload(ctx, payload); err != nil {
 			return err
 		}
@@ -49,11 +57,10 @@ func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequ
 		}
 
 		createReq := &entities.CreateUserRequest{
-			Username:        payload.Username,
-			Email:           payload.Email,
-			PasswordHash:    hash,
-			PasswordSalt:    salt,
-			ActivationToken: token,
+			Username:     payload.Username,
+			Email:        payload.Email,
+			PasswordHash: hash,
+			PasswordSalt: salt,
 		}
 		if err = u.repo.CreateUser(ctx, createReq); err != nil {
 			return err
@@ -65,12 +72,26 @@ func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequ
 
 		return nil
 	})
+
+	if err != nil {
+		var ue apperrors.UserError
+		if errors.As(err, &ue) {
+			return err
+		}
+
+		u.log.ErrorOp(op, err)
+		return apperrors.ErrServer
+	}
+	return nil
 }
 
+// validPayload - UserError: *apperrors.ErrLoginExists
 func (u *SignupUseCase) validPayload(ctx context.Context, payload *entities.SignupRequest) error {
+	const op = "validPayload"
+
 	exists, err := u.repo.CheckLoginExist(ctx, payload)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	if exists.Status {
@@ -88,13 +109,15 @@ func (u *SignupUseCase) validPayload(ctx context.Context, payload *entities.Sign
 }
 
 func (u *SignupUseCase) passwordHashing(password string) (hash string, salt string, err error) {
+	const op = "passwordHashing"
+
 	byteSalt, err := u.salt(u.cfg.PasswordSaltLength())
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	if hash, err = u.hashWithSalt(password, byteSalt); err != nil {
-		return "", "", err
+	if hash, err = HashWithSalt(password, byteSalt); err != nil {
+		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return hash, base64.StdEncoding.EncodeToString(byteSalt), nil
@@ -102,44 +125,44 @@ func (u *SignupUseCase) passwordHashing(password string) (hash string, salt stri
 
 // salt generate random salt
 func (u *SignupUseCase) salt(length int) ([]byte, error) {
+	const op = "salt"
+
 	salt := make([]byte, length)
 	if _, err := rand.Read(salt); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	return salt, nil
 }
 
-// hash generates a hash with salt using sha256 and return base64 string
-func (u *SignupUseCase) hashWithSalt(str string, salt []byte) (hash string, err error) {
+// HashWithSalt generates a hash with salt using sha256 and return base64 string
+func HashWithSalt(str string, salt []byte) (hash string, err error) {
+	const op = "hashWithSalt"
+
 	hasher := sha256.New()
 	data := append([]byte(str), salt...)
 	if _, err = hasher.Write(data); err != nil {
-		return "", fmt.Errorf("hashWithSalt: write failed: %w", err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
-
 }
 
-func (u *SignupUseCase) jwt(email string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"email": email, "exp": time.Now().Add(time.Hour * 24)})
+func (u *SignupUseCase) jwt(email string) (token string, err error) {
+	const op = "jwt"
 
-	return token.SignedString(u.cfg.JWTSecret())
+	expAt := time.Now().Add(u.cfg.EmailJwtExpiry())
+
+	claims := EmailVerificationClaims{
+		Email: email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "auth_grpc_app",
+			ExpiresAt: jwt.NewNumericDate(expAt),
+		},
+	}
+
+	if token, err = JWT(u.cfg.JWTSecret(), claims); err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	return token, nil
 }
-
-// hash generates a hash using sha256 and return base64 string
-//func (u *SignupUseCase) hash(str string) (hash string, err error) {
-//	hasher := sha256.New()
-//	if _, err = hasher.Write([]byte(str)); err != nil {
-//		return "", fmt.Errorf("hash: write failed: %w", err)
-//	}
-//	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
-//}
-
-//func (u *SignupUseCase) token() (token string, err error) {
-//	var rnd = make([]byte, 32)
-//	if _, err = rand.Read(rnd); err != nil {
-//		return "", err
-//	}
-//	return base64.URLEncoding.EncodeToString(rnd), nil
-//}

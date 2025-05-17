@@ -3,13 +3,14 @@ package grpcauthservise
 import (
 	"context"
 	"errors"
-	dtos "github.com/ttrtcixy/users-protos/gen/go/gen/go/users"
+	dtos "github.com/ttrtcixy/users-protos/gen/go/users"
 	"github.com/ttrtcixy/users/internal/core/entities"
-	"github.com/ttrtcixy/users/internal/delivery/errors"
 	"github.com/ttrtcixy/users/internal/delivery/grpc/ports"
+	apperrors "github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -27,19 +28,26 @@ func NewSignup(log logger.Logger, usecase ports.SignupUseCase) *SignupService {
 	}
 }
 
-// todo добавить валидацию сюда
-
-func (s *SignupService) Signup(ctx context.Context, payload *dtos.SignupRequest) (*dtos.SignupResponse, error) {
+func (s *SignupService) Signup(ctx context.Context, payload *dtos.SignupRequest) (*emptypb.Empty, error) {
 	if err := s.validate(payload); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	err := s.usecase.Signup(ctx, s.DTOToEntity(payload))
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, s.errResponse(err)
 	}
 
-	return nil, status.Error(codes.OK, "check email, to confirm registration")
+	return nil, nil
+}
+
+func (s *SignupService) errResponse(err error) error {
+	var exists = &apperrors.ErrLoginExists{}
+	switch {
+	case errors.As(err, &exists):
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	return status.Error(codes.Internal, err.Error())
 }
 
 func (s *SignupService) DTOToEntity(payload *dtos.SignupRequest) *entities.SignupRequest {
@@ -56,8 +64,8 @@ func (s *SignupService) validate(payload *dtos.SignupRequest) error {
 	password := payload.GetPassword()
 
 	var validationErr = &apperrors.ValidationErrors{}
-	if email == "" || username == "" {
-		return errors.New("email and username is required")
+	if email == "" || username == "" || password == "" {
+		return errors.New("email, username and password is required")
 	}
 
 	if err := s.emailValidate(email); err != nil {
@@ -80,12 +88,12 @@ func (s *SignupService) validate(payload *dtos.SignupRequest) error {
 
 func (s *SignupService) emailValidate(email string) error {
 	if utf8.RuneCountInString(email) > 254 {
-		return errors.New("email is too long (max 254 characters)")
+		return errors.New("is too long (max 254 characters)")
 	}
 
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
-		return errors.New("email must contain exactly one @")
+		return errors.New("must contain exactly one @")
 	}
 	local, domain := parts[0], parts[1]
 
@@ -128,12 +136,12 @@ func (s *SignupService) emailValidate(email string) error {
 
 func (s *SignupService) usernameValidate(username string) error {
 	if len(username) < 1 || len(username) > 20 {
-		return errors.New("username must be 1-20 characters long")
+		return errors.New("must be 1-20 characters long")
 	}
 
 	firstChar := rune(username[0])
 	if !unicode.IsLetter(firstChar) && !unicode.IsNumber(firstChar) {
-		return errors.New("username must start with a letter or number")
+		return errors.New("must start with a letter or number")
 	}
 
 	for _, char := range username {
@@ -145,7 +153,7 @@ func (s *SignupService) usernameValidate(username string) error {
 		case char == '_' || char == '-':
 			continue
 		default:
-			return errors.New("username contains invalid characters (only a-z, 0-9, _, -, allowed)")
+			return errors.New("contains invalid characters (only a-z, 0-9, _, -, allowed)")
 		}
 	}
 
@@ -153,12 +161,8 @@ func (s *SignupService) usernameValidate(username string) error {
 }
 
 func (s *SignupService) passwordValidate(password string) error {
-	if password == "" {
-		return errors.New("password is required")
-	}
-
 	if len(password) < 8 || len(password) > 20 {
-		return errors.New("password must be 8-20 characters long")
+		return errors.New("must be 8-20 characters long")
 	}
 	return nil
 }

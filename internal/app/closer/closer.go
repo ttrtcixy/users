@@ -3,7 +3,6 @@ package closer
 import (
 	"context"
 	"fmt"
-	"github.com/ttrtcixy/users/internal/logger"
 	"os"
 	"os/signal"
 	"strings"
@@ -38,7 +37,7 @@ type task struct {
 type tasks []task
 
 type closer struct {
-	log           logger.Logger
+	log           Logger
 	mu            sync.Mutex
 	tasks         tasks
 	totalDuration time.Duration

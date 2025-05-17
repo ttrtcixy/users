@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-const message = "From: %s\nTo: %s\nSubject: Hello\n\nToken: %s.\n"
+const message = "From: %s\nTo: %s\nSubject: Hello\n\nToken: %s\n"
 
 type Smtp interface {
 	Send(to string, token string) error

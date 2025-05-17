@@ -44,7 +44,6 @@ func (s *SigninService) Signin(ctx context.Context, payload *dtos.SigninRequest)
 
 func (s *SigninService) DTOToEntity(payload *dtos.SigninRequest) *entities.SigninRequest {
 	return &entities.SigninRequest{
-		Email:    payload.GetEmail(),
 		Username: payload.GetUsername(),
 		Password: payload.GetPassword(),
 	}

@@ -6,10 +6,6 @@ type SignupRequest struct {
 	Password string
 }
 
-// todo refactor
-type SignupResponse struct {
-}
-
 type CheckLoginResponse struct {
 	Status         bool
 	UsernameExists bool
@@ -17,9 +13,8 @@ type CheckLoginResponse struct {
 }
 
 type CreateUserRequest struct {
-	Username        string
-	Email           string
-	PasswordHash    string
-	PasswordSalt    string
-	ActivationToken string
+	Username     string
+	Email        string
+	PasswordHash string
+	PasswordSalt string
 }

@@ -10,6 +10,7 @@ import (
 type Logger interface {
 	Info(format string, a ...any)
 	Error(format string, a ...any)
+	ErrorOp(op string, err error)
 	Fatal(format string, a ...any)
 	Debug(format string, a ...any)
 	Warning(format string, a ...any)
@@ -17,6 +18,10 @@ type Logger interface {
 
 type slogLogger struct {
 	log *slog.Logger
+}
+
+func (s slogLogger) ErrorOp(op string, err error) {
+	s.log.Error(fmt.Sprintf("%s: %s", op, err.Error()))
 }
 
 func Load() Logger {

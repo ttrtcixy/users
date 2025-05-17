@@ -17,10 +17,15 @@ type SignoutUseCase interface {
 	Signout(ctx context.Context, payload *entities.SignoutRequest) error
 }
 
+type VerifyUseCase interface {
+	Verify(ctx context.Context, payload *entities.VerifyRequest) (*entities.VerifyResponse, error)
+}
+
 type AuthUseCase interface {
 	SigninUseCase
 	SignupUseCase
 	SignoutUseCase
+	VerifyUseCase
 }
 
 type UseCase interface {
