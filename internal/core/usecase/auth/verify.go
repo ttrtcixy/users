@@ -3,11 +3,14 @@ package authusecase
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	apperrors "github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
+	"time"
 )
 
 type VerifyUseCase struct {
@@ -15,6 +18,7 @@ type VerifyUseCase struct {
 	log  logger.Logger
 	repo ports.VerifyRepository
 	jwt  ports.JwtService
+	hash ports.HasherService
 }
 
 type VerifyUseCaseDependency struct {
@@ -22,6 +26,7 @@ type VerifyUseCaseDependency struct {
 	Log  logger.Logger
 	Repo ports.VerifyRepository
 	Jwt  ports.JwtService
+	Hash ports.HasherService
 }
 
 func NewVerify(ctx context.Context, dep *VerifyUseCaseDependency) *VerifyUseCase {
@@ -30,10 +35,9 @@ func NewVerify(ctx context.Context, dep *VerifyUseCaseDependency) *VerifyUseCase
 		log:  dep.Log,
 		repo: dep.Repo,
 		jwt:  dep.Jwt,
+		hash: dep.Hash,
 	}
 }
-
-// todo нужна ли тут транзакция?
 
 // Verify - get jwtToken with email and activate user with that email.
 func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequest) (result *entities.VerifyResponse, err error) {
@@ -48,12 +52,7 @@ func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequ
 		}
 	}()
 
-	email, err := u.jwt.ParseVerificationToken(payload.JwtToken)
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := u.repo.ActivateUser(ctx, email)
+	user, err := u.activateUser(ctx, payload.JwtToken)
 	if err != nil {
 		return nil, err
 	}
@@ -63,12 +62,8 @@ func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequ
 		return nil, err
 	}
 
-	refreshToken, refreshTokenHash, err := u.jwt.RefreshToken()
+	refreshToken, err := u.createSession(ctx, user.ID)
 	if err != nil {
-		return nil, err
-	}
-
-	if err = u.repo.CreateSession(ctx, user.ID, refreshTokenHash); err != nil {
 		return nil, err
 	}
 
@@ -80,89 +75,50 @@ func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequ
 	return result, nil
 }
 
-//// parseJwt - UserError: apperrors.ErrEmailTokenExpired
-//func (u *VerifyUseCase) parseJwt(jwtToken string) (email string, err error) {
-//	const op = "parseJwt"
-//	// parse and validate token
-//	token, err := jwt.ParseWithClaims(jwtToken, &EmailVerificationClaims{}, func(token *jwt.Token) (interface{}, error) {
-//		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-//			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-//		}
-//		return []byte(u.cfg.JWTSecret()), nil
-//	})
-//	if err != nil {
-//		if errors.Is(err, jwt.ErrTokenExpired) {
-//			return "", apperrors.ErrEmailTokenExpired
-//		}
-//		return "", err
-//	}
-//
-//	// get user email to activate account
-//	claims, ok := token.Claims.(*EmailVerificationClaims)
-//	if !ok {
-//		return "", fmt.Errorf("%s: token structure invalid or signature incorrect", op)
-//	}
-//
-//	if claims.Email == "" {
-//		return "", fmt.Errorf("%s: email cannot be empty", op)
-//	}
-//
-//	t, _ := claims.GetExpirationTime()
-//	u.log.Debug(t.String())
-//	return claims.Email, nil
-//}
-//
-//func (u *VerifyUseCase) accessToken(user *entities.User) (token string, err error) {
-//	const op = "accessToken"
-//
-//	exp := time.Now().Add(u.cfg.AccessJwtExpiry())
-//
-//	claims := &UserClaims{
-//		Username: user.Username,
-//		Email:    user.Email,
-//		RoleId:   strconv.Itoa(user.RoleId),
-//		RegisteredClaims: jwt.RegisteredClaims{
-//			ExpiresAt: jwt.NewNumericDate(exp),
-//			Issuer:    "auth_grpc_app",
-//		},
-//	}
-//
-//	if token, err = u.jwt(u.cfg.JWTSecret(), claims); err != nil {
-//		return "", fmt.Errorf("%s: %w", op, err)
-//	}
-//
-//	return token, nil
-//}
-//
-//// todo test refresh token parse
-//
-//// refreshToken - generate jwtToken and hash it to create session user session.
-//func (u *VerifyUseCase) refreshToken() (jwtRefresh, hash string, err error) {
-//	const op = "refreshToken"
-//
-//	exp := time.Now().Add(u.cfg.RefreshJwtExpiry())
-//
-//	claims := &jwt.RegisteredClaims{
-//		Issuer:    "auth_grpc_app",
-//		ExpiresAt: jwt.NewNumericDate(exp),
-//	}
-//
-//	if jwtRefresh, err = JWT(u.cfg.JWTSecret(), claims); err != nil {
-//		return "", "", fmt.Errorf("%s: %w", op, err)
-//	}
-//
-//	if hash, err = u.hash(jwtRefresh); err != nil {
-//		return "", "", fmt.Errorf("%s: %w", op, err)
-//	}
-//
-//	return jwtRefresh, hash, nil
-//}
-//
-//// hash generates a hash using sha256 and return base64 string
-//func (u *VerifyUseCase) hash(str string) (hash string, err error) {
-//	hasher := sha256.New()
-//	if _, err = hasher.Write([]byte(str)); err != nil {
-//		return "", fmt.Errorf("hash: write failed: %w", err)
-//	}
-//	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
-//}
+func (u *VerifyUseCase) activateUser(ctx context.Context, jwtToken string) (user *entities.User, err error) {
+	const op = "activateUser"
+
+	email, err := u.jwt.ParseVerificationToken(jwtToken)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if user, err = u.repo.ActivateUser(ctx, email); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return user, nil
+}
+
+func (u *VerifyUseCase) createSession(ctx context.Context, userID int64) (refreshToken string, err error) {
+	const op = "createSession"
+
+	clientUUID := uuid.NewString()
+
+	tokenUUID := uuid.NewString()
+
+	exp := time.Now().Add(u.cfg.RefreshJwtExpiry())
+
+	if refreshToken, err = u.jwt.RefreshToken(clientUUID, tokenUUID, exp); err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	refreshTokenHash, err := u.hash.Hash(refreshToken)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	createReq := &entities.CreateSession{
+		UserID:           userID,
+		RefreshTokenHash: refreshTokenHash,
+		ClientUUID:       clientUUID,
+		RefreshTokenUUID: tokenUUID,
+		ExpiresAt:        exp,
+	}
+
+	if err = u.repo.CreateSession(ctx, createReq); err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	return refreshTokenHash, nil
+}

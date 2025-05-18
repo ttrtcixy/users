@@ -99,6 +99,8 @@ func (u *SigninUseCase) Signin(ctx context.Context, payload *entities.SigninRequ
 	return result, nil
 }
 
+func (u *SigninUseCase) validateUser()
+
 func (u *SigninUseCase) user(ctx context.Context, payload *entities.SigninRequest) (user *entities.User, err error) {
 	const op = "user"
 

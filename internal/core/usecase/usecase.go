@@ -59,6 +59,7 @@ func NewAuthUseCase(ctx context.Context, dep *Dependency) *AuthUseCase {
 			Log:  dep.Log,
 			Repo: dep.Repo,
 			Jwt:  dep.Jwt,
+			Hash: dep.Hash,
 		}),
 	}
 }

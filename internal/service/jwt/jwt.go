@@ -92,15 +92,22 @@ func (t *JwtTokenService) AccessToken(user *entities.User) (token string, err er
 
 // todo test refresh token parse
 
+type RefreshTokenClaims struct {
+	ClientID string `json:"client_id"`
+	jwt.RegisteredClaims
+}
+
 // RefreshToken - generate jwtToken and hash it to create user session.
-func (t *JwtTokenService) RefreshToken() (token string, err error) {
+func (t *JwtTokenService) RefreshToken(clientID, tokenID string, exp time.Time) (token string, err error) {
 	const op = "JwtTokenService.RefreshToken"
 
-	exp := time.Now().Add(t.cfg.RefreshJwtExpiry())
-
-	claims := &jwt.RegisteredClaims{
-		Issuer:    "auth_grpc_app",
-		ExpiresAt: jwt.NewNumericDate(exp),
+	claims := &RefreshTokenClaims{
+		ClientID: clientID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "auth_grpc_app",
+			ID:        tokenID,
+			ExpiresAt: jwt.NewNumericDate(exp),
+		},
 	}
 
 	if token, err = t.jwt(t.cfg.JWTSecret(), claims); err != nil {
