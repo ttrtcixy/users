@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	apperrors "github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
+	"time"
 )
 
 type SigninUseCase struct {
@@ -56,24 +58,9 @@ func (u *SigninUseCase) Signin(ctx context.Context, payload *entities.SigninRequ
 		}
 	}()
 
-	// todo test с использование не существующего пользователя
-	user, err := u.user(ctx, payload)
+	user, err := u.validateUser(ctx, payload)
 	if err != nil {
 		return nil, err
-	}
-
-	if user.IsActive == false {
-		return nil, apperrors.ErrEmailVerify
-	}
-
-	// todo test
-	ok, err := u.hash.ComparePasswords(user.PasswordHash, payload.Password, user.PasswordSalt)
-	if err != nil {
-		return nil, err
-	}
-
-	if !ok {
-		return nil, apperrors.ErrInvalidPassword
 	}
 
 	accessToken, err := u.jwt.AccessToken(user)
@@ -81,13 +68,9 @@ func (u *SigninUseCase) Signin(ctx context.Context, payload *entities.SigninRequ
 		return nil, err
 	}
 
-	refreshToken, tokenHash, err := u.jwt.RefreshToken()
-	if err != nil {
-		return nil, err
-	}
-
 	// todo if refresh token exists, return him
-	if err = u.repo.CreateSession(ctx, user.ID, tokenHash); err != nil {
+	refreshToken, err := u.createSession(ctx, user.ID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -99,7 +82,29 @@ func (u *SigninUseCase) Signin(ctx context.Context, payload *entities.SigninRequ
 	return result, nil
 }
 
-func (u *SigninUseCase) validateUser()
+func (u *SigninUseCase) validateUser(ctx context.Context, payload *entities.SigninRequest) (user *entities.User, err error) {
+	const op = "validateUser"
+	// todo test с использование не существующего пользователя
+	if user, err = u.user(ctx, payload); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if user.IsActive == false {
+		return nil, apperrors.ErrEmailVerify
+	}
+
+	// todo test
+	ok, err := u.hash.ComparePasswords(user.PasswordHash, payload.Password, user.PasswordSalt)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if !ok {
+		return nil, apperrors.ErrInvalidPassword
+	}
+
+	return user, nil
+}
 
 func (u *SigninUseCase) user(ctx context.Context, payload *entities.SigninRequest) (user *entities.User, err error) {
 	const op = "user"
@@ -118,4 +123,38 @@ func (u *SigninUseCase) user(ctx context.Context, payload *entities.SigninReques
 	}
 
 	return user, nil
+}
+
+// todo other service??
+func (u *SigninUseCase) createSession(ctx context.Context, userID int64) (refreshToken string, err error) {
+	const op = "createSession"
+
+	clientUUID := uuid.NewString()
+
+	tokenUUID := uuid.NewString()
+
+	exp := time.Now().Add(u.cfg.RefreshJwtExpiry())
+
+	if refreshToken, err = u.jwt.RefreshToken(clientUUID, tokenUUID, exp); err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	refreshTokenHash, err := u.hash.Hash(refreshToken)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	createReq := &entities.CreateSession{
+		UserID:           userID,
+		RefreshTokenHash: refreshTokenHash,
+		ClientUUID:       clientUUID,
+		RefreshTokenUUID: tokenUUID,
+		ExpiresAt:        exp,
+	}
+
+	if err = u.repo.CreateSession(ctx, createReq); err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	return refreshTokenHash, nil
 }

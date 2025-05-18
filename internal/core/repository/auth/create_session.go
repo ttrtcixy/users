@@ -15,7 +15,6 @@ var createSession = `
 		    	set jti = $1, 
 		    	    refresh_token_hash = $4, 
 		    	    expires_at = $5;
-
 `
 
 func (r *AuthRepository) CreateSession(ctx context.Context, payload *entities.CreateSession) error {

@@ -6,6 +6,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/goloop/env v1.2.1
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/ttrtcixy/users-protos v1.0.0
 	google.golang.org/grpc v1.72.0
