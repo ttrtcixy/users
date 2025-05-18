@@ -2,45 +2,50 @@ package authusecase
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	"github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/service/smtp"
-	"time"
 )
 
 type SignupUseCase struct {
 	cfg  *config.UsecaseConfig
 	log  logger.Logger
-	repo usecaseports.SignupRepository
-	smtp smtp.Smtp
+	repo ports.SignupRepository
+	smtp ports.SmtpService
+	hash ports.HasherService
+	jwt  ports.JwtService
 }
 
-type EmailVerificationClaims struct {
-	Email string `json:"email"`
-	jwt.RegisteredClaims
+type SignupUseCaseDeps struct {
+	Cfg  *config.UsecaseConfig
+	Log  logger.Logger
+	Repo ports.SignupRepository
+	Smtp ports.SmtpService
+	Hash ports.HasherService
+	Jwt  ports.JwtService
 }
 
-func NewSignup(ctx context.Context, cfg *config.UsecaseConfig, log logger.Logger, repo usecaseports.SignupRepository, smtp smtp.Smtp) *SignupUseCase {
+func NewSignup(ctx context.Context, dep *SignupUseCaseDeps) *SignupUseCase {
 	return &SignupUseCase{
-		cfg:  cfg,
-		log:  log,
-		repo: repo,
-		smtp: smtp,
+		cfg:  dep.Cfg,
+		log:  dep.Log,
+		repo: dep.Repo,
+		smtp: dep.Smtp,
+		hash: dep.Hash,
+		jwt:  dep.Jwt,
 	}
 }
 
-const op = "SignupUseCase.Signup"
+// todo validate как работает fmt.Errorf("%s: %w", на большом стеке вызова)
 
 func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequest) (err error) {
+	const op = "SignupUseCase.Signup"
+
 	err = u.repo.RunInTx(ctx, func(ctx context.Context) error {
 		if err := u.validPayload(ctx, payload); err != nil {
 			return err
@@ -51,7 +56,7 @@ func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequ
 			return err
 		}
 
-		token, err := u.jwt(payload.Email)
+		token, err := u.jwt.EmailVerificationToken(payload.Email)
 		if err != nil {
 			return err
 		}
@@ -111,58 +116,14 @@ func (u *SignupUseCase) validPayload(ctx context.Context, payload *entities.Sign
 func (u *SignupUseCase) passwordHashing(password string) (hash string, salt string, err error) {
 	const op = "passwordHashing"
 
-	byteSalt, err := u.salt(u.cfg.PasswordSaltLength())
+	byteSalt, err := u.hash.Salt(u.cfg.PasswordSaltLength())
 	if err != nil {
 		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	if hash, err = HashWithSalt(password, byteSalt); err != nil {
+	if hash, err = u.hash.HashWithSalt(password, byteSalt); err != nil {
 		return "", "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return hash, base64.StdEncoding.EncodeToString(byteSalt), nil
-}
-
-// salt generate random salt
-func (u *SignupUseCase) salt(length int) ([]byte, error) {
-	const op = "salt"
-
-	salt := make([]byte, length)
-	if _, err := rand.Read(salt); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-	return salt, nil
-}
-
-// HashWithSalt generates a hash with salt using sha256 and return base64 string
-func HashWithSalt(str string, salt []byte) (hash string, err error) {
-	const op = "hashWithSalt"
-
-	hasher := sha256.New()
-	data := append([]byte(str), salt...)
-	if _, err = hasher.Write(data); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
-
-	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
-}
-
-func (u *SignupUseCase) jwt(email string) (token string, err error) {
-	const op = "jwt"
-
-	expAt := time.Now().Add(u.cfg.EmailJwtExpiry())
-
-	claims := EmailVerificationClaims{
-		Email: email,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "auth_grpc_app",
-			ExpiresAt: jwt.NewNumericDate(expAt),
-		},
-	}
-
-	if token, err = JWT(u.cfg.JWTSecret(), claims); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
-
-	return token, nil
 }

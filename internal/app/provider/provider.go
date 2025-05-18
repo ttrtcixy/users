@@ -8,6 +8,8 @@ import (
 	"github.com/ttrtcixy/users/internal/core/usecase"
 	"github.com/ttrtcixy/users/internal/delivery/grpc"
 	"github.com/ttrtcixy/users/internal/logger"
+	"github.com/ttrtcixy/users/internal/service/hash"
+	token "github.com/ttrtcixy/users/internal/service/jwt"
 	"github.com/ttrtcixy/users/internal/service/smtp"
 	storage "github.com/ttrtcixy/users/internal/storage/pg"
 	"time"
@@ -20,7 +22,9 @@ type Provider struct {
 	cfg *config.Config
 
 	db   storage.DB
-	smtp smtp.Smtp
+	smtp *smtp.SenderService
+	hash *hash.HasherService
+	jwt  *token.JwtTokenService
 
 	useCase *usecase.UseCase
 
@@ -35,7 +39,15 @@ func NewProvider() *Provider {
 
 func (p *Provider) UseCase() *usecase.UseCase {
 	if p.useCase == nil {
-		p.useCase = usecase.NewUseCase(context.Background(), p.Logger(), p.Repository(), p.Config(), p.Smtp())
+		dep := &usecase.Dependency{
+			Cfg:  p.Config(),
+			Log:  p.Logger(),
+			Repo: p.Repository(),
+			Smtp: p.SmtpService(),
+			Hash: p.HasherService(),
+			Jwt:  p.JwtService(),
+		}
+		p.useCase = usecase.NewUseCase(context.Background(), dep)
 	}
 
 	return p.useCase
@@ -49,7 +61,7 @@ func (p *Provider) Logger() logger.Logger {
 	return p.logger
 }
 
-func (p *Provider) Smtp() smtp.Smtp {
+func (p *Provider) SmtpService() *smtp.SenderService {
 	if p.smtp == nil {
 		p.smtp = smtp.New(p.Config().SmtpConfig)
 	}
@@ -123,4 +135,19 @@ func (p *Provider) Closer() closer.Closer {
 		})
 	}
 	return p.closer
+}
+
+func (p *Provider) JwtService() *token.JwtTokenService {
+	if p.jwt == nil {
+		p.jwt = token.New(p.Config().UsecaseConfig.JWTConfig)
+	}
+
+	return p.jwt
+}
+
+func (p *Provider) HasherService() *hash.HasherService {
+	if p.hash == nil {
+		p.hash = hash.New()
+	}
+	return p.hash
 }

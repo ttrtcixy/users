@@ -11,12 +11,9 @@ import (
 
 const message = "From: %s\nTo: %s\nSubject: Hello\n\nToken: %s\n"
 
-type Smtp interface {
-	Send(to string, token string) error
-	DebugSend(to string, token string) error
-}
+// todo обернуть ошибки
 
-type Sender struct {
+type SenderService struct {
 	auth    smtp.Auth
 	host    string
 	addr    string
@@ -24,8 +21,8 @@ type Sender struct {
 	message string
 }
 
-func New(cfg *config.SmtpConfig) Smtp {
-	return &Sender{
+func New(cfg *config.SmtpConfig) *SenderService {
+	return &SenderService{
 		auth:    smtp.PlainAuth("", cfg.Sender(), cfg.Password(), cfg.Host()),
 		host:    cfg.Host(),
 		addr:    cfg.Addr(),
@@ -34,7 +31,9 @@ func New(cfg *config.SmtpConfig) Smtp {
 	}
 }
 
-func (s *Sender) DebugSend(to string, token string) error {
+func (s *SenderService) DebugSend(to string, token string) error {
+	const op = "SenderService.DebugSend"
+
 	_, err := fmt.Fprintf(os.Stdout, s.message, s.from, to, token)
 	if err != nil {
 		return err
@@ -42,8 +41,8 @@ func (s *Sender) DebugSend(to string, token string) error {
 	return nil
 }
 
-func (s *Sender) Send(to string, token string) (err error) {
-	const op = "usecase.Signup.Smtp"
+func (s *SenderService) Send(to string, token string) (err error) {
+	const op = "SenderService.Send"
 	client, err := s.newClient()
 	if err != nil {
 		return fmt.Errorf("%s: newClient failed: %w", op, err)
@@ -69,7 +68,7 @@ func (s *Sender) Send(to string, token string) (err error) {
 	return nil
 }
 
-func (s *Sender) newClient() (client *smtp.Client, err error) {
+func (s *SenderService) newClient() (client *smtp.Client, err error) {
 	tlsCfg := &tls.Config{ServerName: s.host}
 	conn, err := tls.Dial("tcp", s.addr, tlsCfg)
 	if err != nil {
@@ -83,7 +82,7 @@ func (s *Sender) newClient() (client *smtp.Client, err error) {
 	return client, nil
 }
 
-func (s *Sender) prepareWriter(client *smtp.Client, to string) (wc io.WriteCloser, err error) {
+func (s *SenderService) prepareWriter(client *smtp.Client, to string) (wc io.WriteCloser, err error) {
 	if err = client.Auth(s.auth); err != nil {
 		return nil, err
 	}
@@ -96,7 +95,7 @@ func (s *Sender) prepareWriter(client *smtp.Client, to string) (wc io.WriteClose
 	return client.Data()
 }
 
-func (s *Sender) writeMessage(wc io.WriteCloser, to string, token string) error {
+func (s *SenderService) writeMessage(wc io.WriteCloser, to string, token string) error {
 	msg := fmt.Sprintf(s.message, s.from, to, token)
 	if _, err := wc.Write([]byte(msg)); err != nil {
 		_ = wc.Close()

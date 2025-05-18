@@ -2,6 +2,7 @@ package authrepo
 
 import (
 	"context"
+	"fmt"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/core/repository/query"
 )
@@ -18,6 +19,8 @@ insert into user_password (user_id, hash, salt)
 `
 
 func (r *AuthRepository) CreateUser(ctx context.Context, payload *entities.CreateUserRequest) error {
+	const op = "AuthRepository.CreateUser"
+
 	q := &query.Query{
 		Name:      "CreateUser",
 		RawQuery:  createUser,
@@ -26,7 +29,7 @@ func (r *AuthRepository) CreateUser(ctx context.Context, payload *entities.Creat
 
 	_, err := r.DB.Exec(ctx, q)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil

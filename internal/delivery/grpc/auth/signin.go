@@ -6,6 +6,7 @@ import (
 	dtos "github.com/ttrtcixy/users-protos/gen/go/users"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/delivery/grpc/ports"
+	apperrors "github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,6 +34,7 @@ func (s *SigninService) Signin(ctx context.Context, payload *dtos.SigninRequest)
 
 	result, err := s.usecase.Signin(ctx, s.DTOToEntity(payload))
 	if err != nil {
+		// todo validate error
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -45,8 +47,24 @@ func (s *SigninService) Signin(ctx context.Context, payload *dtos.SigninRequest)
 func (s *SigninService) DTOToEntity(payload *dtos.SigninRequest) *entities.SigninRequest {
 	return &entities.SigninRequest{
 		Username: payload.GetUsername(),
+		Email:    payload.GetEmail(),
 		Password: payload.GetPassword(),
 	}
+}
+
+func (s *SigninService) errResponse(err error) error {
+	var exists = &apperrors.ErrLoginExists{}
+	switch {
+	case errors.Is(err, apperrors.ErrEmailVerify):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, apperrors.ErrUserNotRegister):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, apperrors.ErrInvalidPassword):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.As(err, &exists):
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	return status.Error(codes.Internal, err.Error())
 }
 
 func (s *SigninService) validate(payload *dtos.SigninRequest) error {

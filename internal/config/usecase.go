@@ -14,36 +14,42 @@ import (
 
 type UsecaseConfig struct {
 	passwordSaltLength int
-	jwtSecret          string
-	emailJwtExpiry     time.Duration
-	accessJwtExpiry    time.Duration
-	refreshJwtExpiry   time.Duration
+	*JWTConfig
+}
+
+type JWTConfig struct {
+	jwtSecret        string
+	emailJwtExpiry   time.Duration
+	accessJwtExpiry  time.Duration
+	refreshJwtExpiry time.Duration
 }
 
 func (cfg *UsecaseConfig) PasswordSaltLength() int {
 	return cfg.passwordSaltLength
 }
 
-func (cfg *UsecaseConfig) JWTSecret() string {
+func (cfg *JWTConfig) JWTSecret() string {
 	return cfg.jwtSecret
 }
 
-func (cfg *UsecaseConfig) EmailJwtExpiry() time.Duration {
+func (cfg *JWTConfig) EmailJwtExpiry() time.Duration {
 	return cfg.emailJwtExpiry
 }
 
-func (cfg *UsecaseConfig) AccessJwtExpiry() time.Duration {
+func (cfg *JWTConfig) AccessJwtExpiry() time.Duration {
 	return cfg.accessJwtExpiry
 }
 
-func (cfg *UsecaseConfig) RefreshJwtExpiry() time.Duration {
+func (cfg *JWTConfig) RefreshJwtExpiry() time.Duration {
 	return cfg.refreshJwtExpiry
 }
 
 func (c *Config) LoadUsecaseConfig(fErr *ErrEnvVariableNotFound) {
 	const op = "LoadUsecaseConfig"
 
-	var cfg = &UsecaseConfig{}
+	var cfg = &UsecaseConfig{
+		JWTConfig: &JWTConfig{},
+	}
 	if env, ok := os.LookupEnv("JWT_SECRET"); ok {
 		cfg.jwtSecret = env
 	} else {

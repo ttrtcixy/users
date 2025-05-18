@@ -9,10 +9,10 @@ import (
 
 type SignoutUseCase struct {
 	log  logger.Logger
-	repo usecaseports.Repository
+	repo ports.Repository
 }
 
-func NewSignout(ctx context.Context, log logger.Logger, repo usecaseports.Repository) *SignoutUseCase {
+func NewSignout(ctx context.Context, log logger.Logger, repo ports.Repository) *SignoutUseCase {
 	return &SignoutUseCase{
 		log:  log,
 		repo: repo,

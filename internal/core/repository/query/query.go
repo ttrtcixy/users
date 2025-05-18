@@ -30,6 +30,5 @@ func (q *Query) String() string {
 			queryString = strings.Replace(queryString, fmt.Sprintf("$%d", k+1), fmt.Sprintf("%v", v), 1)
 		}
 	}
-
 	return queryString
 }

@@ -1,4 +1,4 @@
-package usecaseports
+package ports
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type SignupRepository interface {
 type SigninRepository interface {
 	UserByEmail(ctx context.Context, email string) (*entities.User, error)
 	UserByUsername(ctx context.Context, username string) (*entities.User, error)
-	//User(ctx context.Context, user *entities.User) (*entities.User, error)
+	CreateSession(ctx context.Context, userID int64, session string) error
 }
 
 type VerifyRepository interface {

@@ -6,7 +6,6 @@ import (
 	"github.com/ttrtcixy/users/internal/core/usecase/auth"
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	"github.com/ttrtcixy/users/internal/logger"
-	"github.com/ttrtcixy/users/internal/service/smtp"
 )
 
 type UseCase struct {
@@ -14,10 +13,10 @@ type UseCase struct {
 	*UserUseCase
 }
 
-func NewUseCase(ctx context.Context, log logger.Logger, repo usecaseports.Repository, cfg *config.Config, smtp smtp.Smtp) *UseCase {
+func NewUseCase(ctx context.Context, dep *Dependency) *UseCase {
 	return &UseCase{
-		NewAuthUseCase(ctx, log, repo, cfg, smtp),
-		NewUserUseCase(ctx, log, repo),
+		NewAuthUseCase(ctx, dep),
+		NewUserUseCase(ctx, dep),
 	}
 }
 
@@ -28,18 +27,45 @@ type AuthUseCase struct {
 	*authusecase.VerifyUseCase
 }
 
-func NewAuthUseCase(ctx context.Context, log logger.Logger, repo usecaseports.Repository, cfg *config.Config, smtp smtp.Smtp) *AuthUseCase {
+type Dependency struct {
+	Cfg  *config.Config
+	Log  logger.Logger
+	Repo ports.Repository
+	Smtp ports.SmtpService
+	Hash ports.HasherService
+	Jwt  ports.JwtService
+}
+
+func NewAuthUseCase(ctx context.Context, dep *Dependency) *AuthUseCase {
 	return &AuthUseCase{
-		SignoutUseCase: authusecase.NewSignout(ctx, log, repo),
-		SignupUseCase:  authusecase.NewSignup(ctx, cfg.UsecaseConfig, log, repo, smtp),
-		SigninUseCase:  authusecase.NewSignin(ctx, log, repo),
-		VerifyUseCase:  authusecase.NewVerify(ctx, cfg.UsecaseConfig, log, repo),
+		SignoutUseCase: authusecase.NewSignout(ctx, dep.Log, dep.Repo),
+		SignupUseCase: authusecase.NewSignup(ctx, &authusecase.SignupUseCaseDeps{
+			Cfg:  dep.Cfg.UsecaseConfig,
+			Log:  dep.Log,
+			Repo: dep.Repo,
+			Smtp: dep.Smtp,
+			Hash: dep.Hash,
+			Jwt:  dep.Jwt,
+		}),
+		SigninUseCase: authusecase.NewSignin(ctx, &authusecase.SigninUseCaseDeps{
+			Cfg:  dep.Cfg.UsecaseConfig,
+			Log:  dep.Log,
+			Repo: dep.Repo,
+			Jwt:  dep.Jwt,
+			Hash: dep.Hash,
+		}),
+		VerifyUseCase: authusecase.NewVerify(ctx, &authusecase.VerifyUseCaseDependency{
+			Cfg:  dep.Cfg.UsecaseConfig,
+			Log:  dep.Log,
+			Repo: dep.Repo,
+			Jwt:  dep.Jwt,
+		}),
 	}
 }
 
 type UserUseCase struct {
 }
 
-func NewUserUseCase(ctx context.Context, log logger.Logger, repo usecaseports.Repository) *UserUseCase {
+func NewUserUseCase(ctx context.Context, dep *Dependency) *UserUseCase {
 	return &UserUseCase{}
 }
