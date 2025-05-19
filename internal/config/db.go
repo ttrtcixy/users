@@ -14,7 +14,7 @@ type DBConfig struct {
 }
 
 func (c *Config) LoadDbConfig(fErr *ErrEnvVariableNotFound) {
-	const op = "config.NewDbConfig"
+	const op = "Config.LoadDbConfig"
 	cfg := &DBConfig{}
 
 	if value, ok := os.LookupEnv("DB_URL"); ok {

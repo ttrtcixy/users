@@ -9,10 +9,14 @@ import (
 var (
 	ErrServer            = errors.New("server error")
 	ErrEmailTokenExpired = errors.New("email verification token is expired, request a new token")
+	ErrInvalidEmailToken = errors.New("email verification token is invalid")
 	ErrEmailVerify       = errors.New("please verify email")
 	ErrUserNotRegister   = errors.New("the user is not registered")
 	ErrInvalidPassword   = errors.New("invalid password")
 )
+
+type UserErr struct {
+}
 
 type UserError interface {
 	UserError()

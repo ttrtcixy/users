@@ -10,6 +10,7 @@ import (
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	apperrors "github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
+	token "github.com/ttrtcixy/users/internal/service/jwt"
 	"time"
 )
 
@@ -17,7 +18,8 @@ type VerifyUseCase struct {
 	cfg  *config.UsecaseConfig
 	log  logger.Logger
 	repo ports.VerifyRepository
-	jwt  ports.JwtService
+	//jwt  ports.JwtService
+	jwt  *token.JwtTokenService
 	hash ports.HasherService
 }
 
@@ -25,7 +27,7 @@ type VerifyUseCaseDependency struct {
 	Cfg  *config.UsecaseConfig
 	Log  logger.Logger
 	Repo ports.VerifyRepository
-	Jwt  ports.JwtService
+	Jwt  *token.JwtTokenService
 	Hash ports.HasherService
 }
 
@@ -120,5 +122,5 @@ func (u *VerifyUseCase) createSession(ctx context.Context, userID int64) (refres
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	return refreshTokenHash, nil
+	return refreshToken, nil
 }

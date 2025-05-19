@@ -6,6 +6,7 @@ import (
 	"github.com/ttrtcixy/users/internal/core/usecase/auth"
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	"github.com/ttrtcixy/users/internal/logger"
+	token "github.com/ttrtcixy/users/internal/service/jwt"
 )
 
 type UseCase struct {
@@ -33,7 +34,7 @@ type Dependency struct {
 	Repo ports.Repository
 	Smtp ports.SmtpService
 	Hash ports.HasherService
-	Jwt  ports.JwtService
+	Jwt  *token.JwtTokenService
 }
 
 func NewAuthUseCase(ctx context.Context, dep *Dependency) *AuthUseCase {

@@ -51,6 +51,9 @@ func (t *JwtTokenService) ParseVerificationToken(jwtToken string) (email string,
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			return "", apperrors.ErrEmailTokenExpired
 		}
+		if errors.Is(err, jwt.ErrSignatureInvalid) {
+			return "", apperrors.ErrInvalidEmailToken
+		}
 		return "", err
 	}
 

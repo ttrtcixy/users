@@ -9,16 +9,16 @@ import (
 )
 
 type ErrEnvVariableNotFound struct {
-	Fields []error
+	Variables []error
 }
 
 func (e *ErrEnvVariableNotFound) Error() string {
-	if len(e.Fields) == 0 {
+	if len(e.Variables) == 0 {
 		return ""
 	}
 	var sb strings.Builder
 	sb.WriteString("missing or invalid configuration:\n")
-	for _, err := range e.Fields {
+	for _, err := range e.Variables {
 		sb.WriteString(" - ")
 		sb.WriteString(err.Error())
 		sb.WriteString("\n")
@@ -27,7 +27,7 @@ func (e *ErrEnvVariableNotFound) Error() string {
 }
 
 func (e *ErrEnvVariableNotFound) Add(err error) {
-	e.Fields = append(e.Fields, err)
+	e.Variables = append(e.Variables, err)
 }
 
 // Config struct
@@ -36,6 +36,7 @@ type Config struct {
 	GRPCServerConfig *GRPCServerConfig
 	UsecaseConfig    *UsecaseConfig
 	SmtpConfig       *SmtpConfig
+	CloserConfig     *CloserConfig
 }
 
 func (c *Config) Close() error {
@@ -51,18 +52,20 @@ func New() (*Config, error) {
 	}
 	var cfg = &Config{}
 
-	var fErr = &ErrEnvVariableNotFound{}
+	var envErrs = &ErrEnvVariableNotFound{}
 
-	cfg.LoadDbConfig(fErr)
+	cfg.LoadDbConfig(envErrs)
 
-	cfg.LoadGRPCConfig(fErr)
+	cfg.LoadGRPCConfig(envErrs)
 
-	cfg.LoadUsecaseConfig(fErr)
+	cfg.LoadUsecaseConfig(envErrs)
 
-	cfg.LoadSmtpConfig(fErr)
+	cfg.LoadSmtpConfig(envErrs)
 
-	if fErr.Fields != nil {
-		return nil, fErr
+	cfg.LoadCloserConfig(envErrs)
+
+	if envErrs.Variables != nil {
+		return nil, envErrs
 	}
 
 	return cfg, nil

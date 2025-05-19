@@ -7,6 +7,23 @@ import (
 	"github.com/ttrtcixy/users/internal/core/repository/query"
 )
 
+//WITH inserted AS (
+//INSERT INTO refresh_tokens (jti, user_id, client_id, refresh_token_hash, expires_at)
+//VALUES ($1, $2, $3, $4, $5)
+//ON CONFLICT (client_id) DO UPDATE
+//SET jti = EXCLUDED.jti,
+//refresh_token_hash = EXCLUDED.refresh_token_hash,
+//expires_at = EXCLUDED.expires_at
+//RETURNING user_id
+//)
+//DELETE FROM refresh_tokens
+//WHERE id IN (
+//SELECT id FROM refresh_tokens
+//WHERE user_id = (SELECT user_id FROM inserted)
+//ORDER BY created_at ASC
+//OFFSET 5
+//);
+
 var createSession = `
 	insert into refresh_tokens (jti, user_id, client_id, refresh_token_hash, expires_at) 
 	values ($1, $2, $3, $4, $5) 

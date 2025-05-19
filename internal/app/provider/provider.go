@@ -12,7 +12,6 @@ import (
 	token "github.com/ttrtcixy/users/internal/service/jwt"
 	"github.com/ttrtcixy/users/internal/service/smtp"
 	storage "github.com/ttrtcixy/users/internal/storage/pg"
-	"time"
 )
 
 type Provider struct {
@@ -73,8 +72,7 @@ func (p *Provider) Config() *config.Config {
 	if p.cfg == nil {
 		cfg, err := config.New()
 		if err != nil {
-			p.Logger().Error("[!] %s", err.Error())
-			p.Closer().Close()
+			p.Logger().Fatal("[!] %s", err.Error())
 		}
 
 		p.cfg = cfg
@@ -129,8 +127,8 @@ func (p *Provider) GRPCServer() *grpc.Server {
 func (p *Provider) Closer() closer.Closer {
 	if p.closer == nil {
 		p.closer = closer.New(closer.Config{
-			TotalDuration: 5 * time.Second,
-			FuncDuration:  3 * time.Second,
+			TotalDuration: p.Config().CloserConfig.TotalDuration(),
+			FuncDuration:  p.Config().CloserConfig.FuncDuration(),
 			Logger:        p.Logger(),
 		})
 	}

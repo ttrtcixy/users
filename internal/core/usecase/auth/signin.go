@@ -39,6 +39,7 @@ func NewSignin(ctx context.Context, dep *SigninUseCaseDeps) *SigninUseCase {
 	}
 }
 
+// todo max session count
 func (u *SigninUseCase) Signin(ctx context.Context, payload *entities.SigninRequest) (result *entities.SigninResponse, err error) {
 	const op = "SigninUseCase.Signin"
 	defer func() {
@@ -156,5 +157,5 @@ func (u *SigninUseCase) createSession(ctx context.Context, userID int64) (refres
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	return refreshTokenHash, nil
+	return refreshToken, nil
 }

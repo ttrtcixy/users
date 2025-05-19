@@ -19,7 +19,7 @@ type GRPCServerConfig struct {
 }
 
 func (c *Config) LoadGRPCConfig(fErr *ErrEnvVariableNotFound) {
-	const op = "config.NewGRPCConfig"
+	const op = "Config.LoadGRPCConfig"
 	cfg := &GRPCServerConfig{}
 
 	if value, ok := os.LookupEnv("GRPC_HOST"); ok {

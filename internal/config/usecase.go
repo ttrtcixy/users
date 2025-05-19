@@ -45,7 +45,7 @@ func (cfg *JWTConfig) RefreshJwtExpiry() time.Duration {
 }
 
 func (c *Config) LoadUsecaseConfig(fErr *ErrEnvVariableNotFound) {
-	const op = "LoadUsecaseConfig"
+	const op = "Config.LoadUsecaseConfig"
 
 	var cfg = &UsecaseConfig{
 		JWTConfig: &JWTConfig{},

@@ -14,7 +14,7 @@ type SmtpConfig struct {
 }
 
 func (c *Config) LoadSmtpConfig(fErr *ErrEnvVariableNotFound) {
-	const op = "config.NewGRPCConfig"
+	const op = "Config.LoadSmtpConfig"
 	cfg := &SmtpConfig{}
 
 	if value, ok := os.LookupEnv("SMTP_HOST"); ok {
