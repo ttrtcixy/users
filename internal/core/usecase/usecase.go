@@ -26,6 +26,7 @@ type AuthUseCase struct {
 	*authusecase.SignupUseCase
 	*authusecase.SigninUseCase
 	*authusecase.VerifyUseCase
+	*authusecase.RefreshUseCase
 }
 
 type Dependency struct {
@@ -60,7 +61,13 @@ func NewAuthUseCase(ctx context.Context, dep *Dependency) *AuthUseCase {
 			Log:  dep.Log,
 			Repo: dep.Repo,
 			Jwt:  dep.Jwt,
-			Hash: dep.Hash,
+		}),
+		RefreshUseCase: authusecase.NewRefresh(ctx, &authusecase.RefreshUseCaseDependency{
+			Cfg:  dep.Cfg.UsecaseConfig,
+			Log:  dep.Log,
+			Repo: dep.Repo,
+			Jwt:  dep.Jwt,
+			//Hash: dep.Hash,
 		}),
 	}
 }

@@ -3,7 +3,6 @@ package authrepo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/core/repository/query"
@@ -11,8 +10,16 @@ import (
 )
 
 var userByUsername = `
-select u.user_id, u.email, u.is_active, u.role_id, up.hash, up.salt  from users u
-	join user_password up using(user_id) where username = $1;
+select 
+    u.user_id, 
+    u.email, 
+    u.is_active, 
+    u.role_id, 
+    up.hash, 
+    up.salt 
+from users u
+	join user_password up using(user_id) 
+where username = $1;
 `
 
 func (r *AuthRepository) UserByUsername(ctx context.Context, username string) (*entities.User, error) {
@@ -36,7 +43,7 @@ func (r *AuthRepository) UserByUsername(ctx context.Context, username string) (*
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apperrors.ErrUserNotRegister
 		}
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, apperrors.Wrap(op, err)
 	}
 
 	user.Username = username

@@ -1,12 +1,16 @@
 package entities
 
 type User struct {
-	ID           int64
-	Username     string
-	Email        string
-	Password     string
-	IsActive     bool
-	RoleId       int
+	ID       int
+	Username string
+	Email    string
+	Password string
+	IsActive bool
+	RoleId   int
+	UserPassword
+}
+
+type UserPassword struct {
 	PasswordHash string
 	PasswordSalt string
 }

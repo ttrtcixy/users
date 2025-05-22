@@ -17,4 +17,5 @@ type CreateUserRequest struct {
 	Email        string
 	PasswordHash string
 	PasswordSalt string
+	RoleID       int
 }

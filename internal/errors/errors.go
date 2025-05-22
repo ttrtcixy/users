@@ -7,18 +7,41 @@ import (
 )
 
 var (
-	ErrServer            = errors.New("server error")
-	ErrEmailTokenExpired = errors.New("email verification token is expired, request a new token")
-	ErrInvalidEmailToken = errors.New("email verification token is invalid")
-	ErrEmailVerify       = errors.New("please verify email")
-	ErrUserNotRegister   = errors.New("the user is not registered")
-	ErrInvalidPassword   = errors.New("invalid password")
+	ErrServer UserErr = "server error"
+
+	ErrEmailVerify          UserErr = "please verify email"
+	ErrUserNotRegister      UserErr = "the user is not registered"
+	ErrInvalidPassword      UserErr = "invalid password"
+	ErrUserAlreadyActivated UserErr = "user already activated"
+
+	// jwt errors
+	ErrEmailTokenExpired       UserErr = "email verification token is expired, request a new token"
+	ErrInvalidEmailVerifyToken UserErr = "email verification token is invalid"
+	ErrInvalidRefreshToken     UserErr = "refresh token is invalid"
+	ErrRefreshTokenExpired     UserErr = "refresh token is expired"
 )
 
-type UserErr struct {
+func Wrap(op string, err error) error {
+	if err == nil {
+		return nil
+	}
+	var userErr UserError
+	if errors.As(err, &userErr) {
+		return err
+	}
+	return fmt.Errorf("%s: %w", op, err)
 }
 
+type UserErr string
+
+func (e UserErr) Error() string {
+	return string(e)
+}
+
+func (e UserErr) UserError() {}
+
 type UserError interface {
+	error
 	UserError()
 }
 

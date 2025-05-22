@@ -1,10 +1,11 @@
 package entities
 
 type VerifyRequest struct {
-	JwtToken string
+	JwtEmailToken string
 }
 
 type VerifyResponse struct {
 	AccessToken  string
 	RefreshToken string
+	ClientUUID   string
 }

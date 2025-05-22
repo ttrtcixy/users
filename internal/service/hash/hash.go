@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
+	apperrors "github.com/ttrtcixy/users/internal/errors"
 )
 
 type HasherService struct {
@@ -20,7 +20,7 @@ func (h *HasherService) Hash(str string) (hash string, err error) {
 
 	hasher := sha256.New()
 	if _, err = hasher.Write([]byte(str)); err != nil {
-		return "", fmt.Errorf("hash: write failed: %w", err)
+		return "", apperrors.Wrap(op, err)
 	}
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
 }
@@ -31,7 +31,7 @@ func (h *HasherService) Salt(length int) ([]byte, error) {
 
 	salt := make([]byte, length)
 	if _, err := rand.Read(salt); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, apperrors.Wrap(op, err)
 	}
 	return salt, nil
 }
@@ -43,7 +43,7 @@ func (h *HasherService) HashWithSalt(str string, salt []byte) (hash string, err 
 	hasher := sha256.New()
 	data := append([]byte(str), salt...)
 	if _, err = hasher.Write(data); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", apperrors.Wrap(op, err)
 	}
 
 	return base64.StdEncoding.EncodeToString(hasher.Sum(nil)), nil
@@ -54,12 +54,12 @@ func (h *HasherService) ComparePasswords(storedHash, password string, salt strin
 	const op = "HasherService.ComparePasswords"
 	byteSalt, err := base64.StdEncoding.DecodeString(salt)
 	if err != nil {
-		return false, fmt.Errorf("%s: %w", op, err)
+		return false, apperrors.Wrap(op, err)
 	}
 
 	computedHash, err := h.HashWithSalt(password, byteSalt)
 	if err != nil {
-		return false, fmt.Errorf("%s: %w", op, err)
+		return false, apperrors.Wrap(op, err)
 	}
 
 	return storedHash == computedHash, nil

@@ -38,13 +38,14 @@ func (s *VerifyService) Verify(ctx context.Context, payload *dtos.VerifyRequest)
 }
 
 func (s *VerifyService) DTOToEntity(payload *dtos.VerifyRequest) *entities.VerifyRequest {
-	return &entities.VerifyRequest{JwtToken: payload.JwtToken}
+	return &entities.VerifyRequest{JwtEmailToken: payload.JwtEmailVerifyToken}
 }
 
 func (s *VerifyService) EntityToDTO(result *entities.VerifyResponse) *dtos.VerifyResponse {
 	return &dtos.VerifyResponse{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
+		ClientId:     result.ClientUUID,
 	}
 }
 
@@ -52,13 +53,15 @@ func (s *VerifyService) errResponse(err error) error {
 	switch {
 	case errors.Is(err, apperrors.ErrEmailTokenExpired):
 		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, apperrors.ErrInvalidEmailVerifyToken):
+		return status.Error(codes.InvalidArgument, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}
 }
 
 func (s *VerifyService) validate(payload *dtos.VerifyRequest) error {
-	jwt := payload.GetJwtToken()
+	jwt := payload.GetJwtEmailVerifyToken()
 
 	if len(jwt) <= 0 {
 		return errors.New("token required")

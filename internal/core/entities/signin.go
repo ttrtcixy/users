@@ -9,4 +9,5 @@ type SigninRequest struct {
 type SigninResponse struct {
 	AccessToken  string
 	RefreshToken string
+	ClientUUID   string
 }

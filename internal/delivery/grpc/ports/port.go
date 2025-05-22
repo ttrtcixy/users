@@ -21,11 +21,16 @@ type VerifyUseCase interface {
 	Verify(ctx context.Context, payload *entities.VerifyRequest) (*entities.VerifyResponse, error)
 }
 
+type RefreshUseCase interface {
+	Refresh(ctx context.Context, payload *entities.RefreshRequest) (*entities.RefreshResponse, error)
+}
+
 type AuthUseCase interface {
 	SigninUseCase
 	SignupUseCase
 	SignoutUseCase
 	VerifyUseCase
+	RefreshUseCase
 }
 
 type UseCase interface {

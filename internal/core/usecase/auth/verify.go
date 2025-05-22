@@ -3,7 +3,6 @@ package authusecase
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/core/entities"
@@ -18,9 +17,8 @@ type VerifyUseCase struct {
 	cfg  *config.UsecaseConfig
 	log  logger.Logger
 	repo ports.VerifyRepository
-	//jwt  ports.JwtService
 	jwt  *token.JwtTokenService
-	hash ports.HasherService
+	//hash ports.HasherService
 }
 
 type VerifyUseCaseDependency struct {
@@ -28,7 +26,7 @@ type VerifyUseCaseDependency struct {
 	Log  logger.Logger
 	Repo ports.VerifyRepository
 	Jwt  *token.JwtTokenService
-	Hash ports.HasherService
+	//Hash ports.HasherService
 }
 
 func NewVerify(ctx context.Context, dep *VerifyUseCaseDependency) *VerifyUseCase {
@@ -37,16 +35,18 @@ func NewVerify(ctx context.Context, dep *VerifyUseCaseDependency) *VerifyUseCase
 		log:  dep.Log,
 		repo: dep.Repo,
 		jwt:  dep.Jwt,
-		hash: dep.Hash,
+		//hash: dep.Hash,
 	}
 }
 
 // Verify - get jwtToken with email and activate user with that email.
 func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequest) (result *entities.VerifyResponse, err error) {
 	const op = "VerifyUseCase.Verify"
+
 	defer func() {
 		if err != nil {
-			if errors.Is(err, apperrors.ErrEmailTokenExpired) {
+			var userErr apperrors.UserError
+			if errors.As(err, &userErr) {
 				return
 			}
 			u.log.ErrorOp(op, err)
@@ -54,7 +54,7 @@ func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequ
 		}
 	}()
 
-	user, err := u.activateUser(ctx, payload.JwtToken)
+	user, err := u.activateUser(ctx, payload.JwtEmailToken)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequ
 		return nil, err
 	}
 
-	refreshToken, err := u.createSession(ctx, user.ID)
+	refreshToken, clientUUID, err := u.createSession(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,27 +72,28 @@ func (u *VerifyUseCase) Verify(ctx context.Context, payload *entities.VerifyRequ
 	result = &entities.VerifyResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		ClientUUID:   clientUUID,
 	}
 
 	return result, nil
 }
 
-func (u *VerifyUseCase) activateUser(ctx context.Context, jwtToken string) (user *entities.User, err error) {
+func (u *VerifyUseCase) activateUser(ctx context.Context, jwtToken string) (user *entities.TokenUserInfo, err error) {
 	const op = "activateUser"
 
 	email, err := u.jwt.ParseVerificationToken(jwtToken)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, apperrors.Wrap(op, err)
 	}
 
 	if user, err = u.repo.ActivateUser(ctx, email); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+		return nil, apperrors.Wrap(op, err)
 	}
 
 	return user, nil
 }
 
-func (u *VerifyUseCase) createSession(ctx context.Context, userID int64) (refreshToken string, err error) {
+func (u *VerifyUseCase) createSession(ctx context.Context, userID int) (refreshToken, clientID string, err error) {
 	const op = "createSession"
 
 	clientUUID := uuid.NewString()
@@ -102,25 +103,19 @@ func (u *VerifyUseCase) createSession(ctx context.Context, userID int64) (refres
 	exp := time.Now().Add(u.cfg.RefreshJwtExpiry())
 
 	if refreshToken, err = u.jwt.RefreshToken(clientUUID, tokenUUID, exp); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
-
-	refreshTokenHash, err := u.hash.Hash(refreshToken)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", "", apperrors.Wrap(op, err)
 	}
 
 	createReq := &entities.CreateSession{
 		UserID:           userID,
-		RefreshTokenHash: refreshTokenHash,
 		ClientUUID:       clientUUID,
 		RefreshTokenUUID: tokenUUID,
 		ExpiresAt:        exp,
 	}
 
 	if err = u.repo.CreateSession(ctx, createReq); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", "", apperrors.Wrap(op, err)
 	}
 
-	return refreshToken, nil
+	return refreshToken, clientID, nil
 }

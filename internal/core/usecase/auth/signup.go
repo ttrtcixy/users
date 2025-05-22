@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"github.com/ttrtcixy/users/internal/config"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/core/usecase/ports"
 	"github.com/ttrtcixy/users/internal/errors"
 	"github.com/ttrtcixy/users/internal/logger"
+	token "github.com/ttrtcixy/users/internal/service/jwt"
 )
 
 type SignupUseCase struct {
@@ -18,7 +18,7 @@ type SignupUseCase struct {
 	repo ports.SignupRepository
 	smtp ports.SmtpService
 	hash ports.HasherService
-	jwt  ports.JwtService
+	jwt  *token.JwtTokenService
 }
 
 type SignupUseCaseDeps struct {
@@ -27,7 +27,7 @@ type SignupUseCaseDeps struct {
 	Repo ports.SignupRepository
 	Smtp ports.SmtpService
 	Hash ports.HasherService
-	Jwt  ports.JwtService
+	Jwt  *token.JwtTokenService
 }
 
 func NewSignup(ctx context.Context, dep *SignupUseCaseDeps) *SignupUseCase {
@@ -56,7 +56,7 @@ func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequ
 			return err
 		}
 
-		token, err := u.jwt.EmailVerificationToken(payload.Email)
+		emailToken, err := u.jwt.EmailVerificationToken(payload.Email)
 		if err != nil {
 			return err
 		}
@@ -64,6 +64,7 @@ func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequ
 		createReq := &entities.CreateUserRequest{
 			Username:     payload.Username,
 			Email:        payload.Email,
+			RoleID:       2, // "default user"
 			PasswordHash: hash,
 			PasswordSalt: salt,
 		}
@@ -71,7 +72,7 @@ func (u *SignupUseCase) Signup(ctx context.Context, payload *entities.SignupRequ
 			return err
 		}
 
-		if err = u.smtp.DebugSend(payload.Email, token); err != nil {
+		if err = u.smtp.DebugSend(payload.Email, emailToken); err != nil {
 			return err
 		}
 
@@ -96,7 +97,7 @@ func (u *SignupUseCase) validPayload(ctx context.Context, payload *entities.Sign
 
 	exists, err := u.repo.CheckLoginExist(ctx, payload)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return apperrors.Wrap(op, err)
 	}
 
 	if exists.Status {
@@ -107,7 +108,8 @@ func (u *SignupUseCase) validPayload(ctx context.Context, payload *entities.Sign
 		if exists.EmailExists {
 			err.Email = payload.Email
 		}
-		return err
+		// todo test
+		return apperrors.Wrap(op, err)
 	}
 
 	return nil
@@ -118,11 +120,11 @@ func (u *SignupUseCase) passwordHashing(password string) (hash string, salt stri
 
 	byteSalt, err := u.hash.Salt(u.cfg.PasswordSaltLength())
 	if err != nil {
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return "", "", apperrors.Wrap(op, err)
 	}
 
 	if hash, err = u.hash.HashWithSalt(password, byteSalt); err != nil {
-		return "", "", fmt.Errorf("%s: %w", op, err)
+		return "", "", apperrors.Wrap(op, err)
 	}
 
 	return hash, base64.StdEncoding.EncodeToString(byteSalt), nil

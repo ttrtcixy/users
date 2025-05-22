@@ -34,13 +34,13 @@ func (s *SigninService) Signin(ctx context.Context, payload *dtos.SigninRequest)
 
 	result, err := s.usecase.Signin(ctx, s.DTOToEntity(payload))
 	if err != nil {
-		// todo validate error
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, s.errResponse(err)
 	}
 
 	return &dtos.SigninResponse{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
+		ClientId:     result.ClientUUID,
 	}, nil
 }
 

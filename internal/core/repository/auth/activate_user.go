@@ -2,19 +2,22 @@ package authrepo
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"github.com/jackc/pgx/v5"
 	"github.com/ttrtcixy/users/internal/core/entities"
 	"github.com/ttrtcixy/users/internal/core/repository/query"
+	apperrors "github.com/ttrtcixy/users/internal/errors"
 )
 
-// todo добавить проверку на то что пользователь уже активирован?
 var activateUser = `
-	update users
+update users
 	set is_active = true
-	where email = $1 returning user_id, username, role_id;
+where email = $1 and is_active = false
+returning user_id, username, role_id;
 `
 
-func (r *AuthRepository) ActivateUser(ctx context.Context, email string) (*entities.User, error) {
+// ActivateUser - if the user is not activated, activate them
+func (r *AuthRepository) ActivateUser(ctx context.Context, email string) (*entities.TokenUserInfo, error) {
 	const op = "AuthRepository.ActivateUser"
 	q := &query.Query{
 		Name:      "Activate User",
@@ -22,11 +25,14 @@ func (r *AuthRepository) ActivateUser(ctx context.Context, email string) (*entit
 		Arguments: []any{email},
 	}
 
-	user := &entities.User{}
+	user := &entities.TokenUserInfo{}
 	user.Email = email
 
-	if err := r.DB.QueryRow(ctx, q).Scan(&user.ID, &user.Username, &user.RoleId); err != nil {
-		return nil, fmt.Errorf("%s: %w", op, err)
+	if err := r.DB.QueryRow(ctx, q).Scan(&user.ID, &user.Username, &user.RoleID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperrors.ErrUserAlreadyActivated
+		}
+		return nil, apperrors.Wrap(op, err)
 	}
 
 	return user, nil

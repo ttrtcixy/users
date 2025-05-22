@@ -37,9 +37,9 @@ type UserClaims struct {
 	jwt.RegisteredClaims
 }
 
-// ParseVerificationToken - UserError: apperrors.ErrEmailTokenExpired
+// ParseVerificationToken - UserError: ErrEmailTokenExpired, ErrInvalidEmailToken, ErrInvalidVerificationToken
 func (t *JwtTokenService) ParseVerificationToken(jwtToken string) (email string, err error) {
-	const op = "JwtTokenService.Parse"
+	const op = "JwtTokenService.ParseVerificationToken"
 	// parse and validate token
 	token, err := jwt.ParseWithClaims(jwtToken, &EmailVerificationClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -52,26 +52,26 @@ func (t *JwtTokenService) ParseVerificationToken(jwtToken string) (email string,
 			return "", apperrors.ErrEmailTokenExpired
 		}
 		if errors.Is(err, jwt.ErrSignatureInvalid) {
-			return "", apperrors.ErrInvalidEmailToken
+			return "", apperrors.ErrInvalidEmailVerifyToken
 		}
-		return "", err
+		return "", apperrors.Wrap(op, err)
 	}
 
 	// get user email to activate account
 	claims, ok := token.Claims.(*EmailVerificationClaims)
 	if !ok {
-		return "", fmt.Errorf("%s: token structure invalid or signature incorrect", op)
+		return "", apperrors.ErrInvalidEmailVerifyToken
 	}
 
 	if claims.Email == "" {
-		return "", fmt.Errorf("%s: email cannot be empty", op)
+		return "", apperrors.ErrInvalidEmailVerifyToken
 	}
 
 	return claims.Email, nil
 }
 
 // AccessToken - generate access token with user username, email, roleId.
-func (t *JwtTokenService) AccessToken(user *entities.User) (token string, err error) {
+func (t *JwtTokenService) AccessToken(user *entities.TokenUserInfo) (token string, err error) {
 	const op = "JwtTokenService.AccessToken"
 
 	exp := time.Now().Add(t.cfg.AccessJwtExpiry())
@@ -79,7 +79,7 @@ func (t *JwtTokenService) AccessToken(user *entities.User) (token string, err er
 	claims := &UserClaims{
 		Username: user.Username,
 		Email:    user.Email,
-		RoleId:   strconv.Itoa(user.RoleId),
+		RoleId:   strconv.Itoa(user.RoleID),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(exp),
 			Issuer:    "auth_grpc_app",
@@ -87,7 +87,7 @@ func (t *JwtTokenService) AccessToken(user *entities.User) (token string, err er
 	}
 
 	if token, err = t.jwt(t.cfg.JWTSecret(), claims); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", apperrors.Wrap(op, err)
 	}
 
 	return token, nil
@@ -100,7 +100,7 @@ type RefreshTokenClaims struct {
 	jwt.RegisteredClaims
 }
 
-// RefreshToken - generate jwtToken and hash it to create user session.
+// RefreshToken - generate jwt Token.
 func (t *JwtTokenService) RefreshToken(clientID, tokenID string, exp time.Time) (token string, err error) {
 	const op = "JwtTokenService.RefreshToken"
 
@@ -114,10 +114,49 @@ func (t *JwtTokenService) RefreshToken(clientID, tokenID string, exp time.Time) 
 	}
 
 	if token, err = t.jwt(t.cfg.JWTSecret(), claims); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", apperrors.Wrap(op, err)
 	}
 
 	return token, nil
+}
+
+// ParseRefreshToken - parse refresh token generated with RefreshToken()
+func (t *JwtTokenService) ParseRefreshToken(jwtToken string) (clientID, jtl string, err error) {
+	const op = "JwtTokenService.ParseRefreshToken"
+
+	token, err := jwt.ParseWithClaims(jwtToken, &RefreshTokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(t.cfg.JWTSecret()), nil
+	})
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return "", "", apperrors.ErrRefreshTokenExpired
+		}
+		if errors.Is(err, jwt.ErrSignatureInvalid) {
+			return "", "", apperrors.ErrInvalidRefreshToken
+		}
+		if errors.Is(err, jwt.ErrTokenMalformed) {
+			return "", "", apperrors.ErrInvalidRefreshToken
+		}
+		return "", "", apperrors.Wrap(op, err)
+	}
+
+	claims, ok := token.Claims.(*RefreshTokenClaims)
+	if !ok {
+		return "", "", apperrors.ErrInvalidRefreshToken
+	}
+
+	if claims.ClientID == "" {
+		return "", "", apperrors.ErrInvalidRefreshToken
+	}
+
+	if claims.ID == "" {
+		return "", "", apperrors.ErrInvalidRefreshToken
+	}
+
+	return claims.ClientID, claims.ID, nil
 }
 
 // EmailVerificationToken - generate jwtToken with user email to verify.
@@ -136,7 +175,7 @@ func (t *JwtTokenService) EmailVerificationToken(email string) (token string, er
 	}
 
 	if token, err = t.jwt(t.cfg.JWTSecret(), claims); err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", apperrors.Wrap(op, err)
 	}
 
 	return token, nil

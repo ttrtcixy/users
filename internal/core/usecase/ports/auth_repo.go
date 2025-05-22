@@ -13,6 +13,8 @@ type AuthRepository interface {
 	SignupRepository
 	SigninRepository
 	VerifyRepository
+	RefreshRepository
+	SignoutRepository
 }
 
 type SignupRepository interface {
@@ -28,6 +30,13 @@ type SigninRepository interface {
 }
 
 type VerifyRepository interface {
-	ActivateUser(ctx context.Context, email string) (*entities.User, error)
+	ActivateUser(ctx context.Context, email string) (*entities.TokenUserInfo, error)
 	CreateSession(ctx context.Context, payload *entities.CreateSession) error
+}
+
+type RefreshRepository interface {
+	RefreshSession(ctx context.Context, payload *entities.RefreshSession) (*entities.TokenUserInfo, error)
+}
+type SignoutRepository interface {
+	DeleteSession(ctx context.Context, payload *entities.SignoutRequest) error
 }
